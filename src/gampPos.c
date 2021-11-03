@@ -711,7 +711,7 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 	time = rtk->sol.time;  /* previous epoch */
 	PPP_Glo.bOKSPP = 1;
 
-	/* rover position by single point positioning */
+	/* rover position by single point positioning 通过SPP得到当前历元的初值 */
 	if (!spp(obs, n, nav, opt, &rtk->sol, NULL, rtk->ssat, msg)) {
 		sprintf(PPP_Glo.chMsg, "*** ERROR: point pos error (%s)\n", msg);
 		outDebug(OUTWIN, OUTFIL, 0);
@@ -727,6 +727,7 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 
 	if (time.time != 0) rtk->tt = timediff(rtk->sol.time, time);
 
+	/* - 检查当前历元的伪距，相位(伪距粗差剔除？) */
 	nu = n;
 	obsScan_PPP(opt, obs, n, &nu);
 	if (nu <= 4) {
@@ -735,7 +736,7 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 		return 0;
 	}
 
-	//clock jump repair
+	//clock jump repair 钟跳修复
 	clkRepair(obs, nu);
 
 	/* precise point positioning */

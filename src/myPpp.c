@@ -326,6 +326,7 @@ extern void detecs(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	int i, j, b1, b2;
 	double dt;
 
+	/* 所有卫星各个频率的周跳指示符置0 */
 	for (i = 0; i < MAXSAT; i++) for (j = 0; j < rtk->opt.nf; j++) {
 		rtk->ssat[i].slip[j] = 0;
 	}
