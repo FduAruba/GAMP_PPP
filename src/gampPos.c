@@ -787,6 +787,7 @@ static void procpos(rtk_t* rtk, const prcopt_t* popt, const solopt_t* sopt, int 
 			continue;
 		}
 
+		// - 北斗卫星多径校正
 		if (PPP_Glo.prcOpt_Ex.navSys & SYS_CMP) {
 			BDmultipathCorr(rtk, obs, n);
 		}
