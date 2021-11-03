@@ -1349,6 +1349,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		}
 	}
 
+	/* ÖÜÌø¼ì²â */
 	detecs(rtk, obs, n, nav);
 
 	/* temporal update of ekf states */

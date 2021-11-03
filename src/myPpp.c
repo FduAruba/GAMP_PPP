@@ -175,7 +175,7 @@ extern double wlAmbMeas(const obsd_t* obs, const nav_t* nav)
 
 	lam1 = lam[i];
 	lam2 = lam[j];
-	res = (obs->L[i] - obs->L[j]) - (lam2 - lam1) / (lam1 + lam2) * (P1 / lam1 + P2 / lam2);
+	res = (obs->L[i] - obs->L[j]) - (lam2 - lam1) / (lam1 + lam2) * (P1 / lam1 + P2 / lam2); // 返回宽巷模糊度
 
 	return res;
 }
@@ -210,7 +210,7 @@ static void detslp_mw(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			PPP_Glo.ssat_Ex[sat - 1].mwIndex = 0;
 		}
 
-		wl1 = wlAmbMeas(obs + i, nav);
+		wl1 = wlAmbMeas(obs + i, nav);			// 宽巷模糊度
 		wl0 = PPP_Glo.ssat_Ex[sat - 1].mw[1];
 
 		/*sprintf(PPP_Glo.chMsg,"sat=%s, mw0=%13.3f, mw1=%13.3f\n",PPP_Glo.sFlag[sat-1].id,wl1,
@@ -229,7 +229,7 @@ static void detslp_mw(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			bLowElev = 1;
 		}
 
-		dtmp = el * R2D;
+		dtmp = el * R2D; // 将仰角转换成角度
 
 		if (el >= rad_20) thres = PPP_Glo.prcOpt_Ex.csThresMW;
 		else	 thres = -PPP_Glo.prcOpt_Ex.csThresMW * 0.1 * dtmp + 3 * PPP_Glo.prcOpt_Ex.csThresMW;
@@ -249,8 +249,7 @@ static void detslp_mw(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		}
 	}
 
-	if (2 * nd + 1 <= n && nd < n - 3 && nd <= 3) {
-	}
+	if (2 * nd + 1 <= n && nd < n - 3 && nd <= 3) {}
 	else if (nd > 2) {
 		i = findGross(0, 0, delta, nd, 0, &std_ex, &ave_ex, NULL, 4.0, 0.3, 0.2);
 
@@ -336,7 +335,7 @@ extern void detecs(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	PPP_Glo.delEp = myRound(dt);
 
 	if (PPP_Glo.sample <= 1.5) {
-		if (fabs(rtk->tt) <= 10.0)	 PPP_Glo.delEp = 1;
+		if (fabs(rtk->tt) <= 10.0)		PPP_Glo.delEp = 1;
 		else if (fabs(rtk->tt) <= 15.0) PPP_Glo.delEp = 2;
 		else if (fabs(rtk->tt) <= 22.0) PPP_Glo.delEp = 3;
 	}
