@@ -62,7 +62,7 @@ static int proccfgfile(char cfgfile[])
 	}
 
 	if (PPP_Glo.prcType == 0)
-		procOneFile(PPP_Glo.inputPath, cfgfile, 0, 1);
+		procOneFile(PPP_Glo.inputPath, cfgfile, 0, 1);			// - 单个obs处理入口
 	else if (PPP_Glo.prcType == 1)
 		batchProc(PPP_Glo.inputPath, cfgfile);
 

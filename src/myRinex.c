@@ -161,6 +161,13 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 	if ((p = strrchr(ofilepath, FILEPATHSEP)))
 		xStrMid(PPP_Glo.obsDir, 0, p - ofilepath, ofilepath);
 
+	/* -----------------------------------------------------------
+	   根据输入文件ofile路径，解析获得：
+	 * ext				| obs拓展名
+	 * sitename			| obs站名（4位）
+	 * filename			| obs文件名（不含拓展名）
+	 * filename_full	| obs文件名（包含拓展名）
+	  ------------------------------------------------------------ */
 	if ((p = strrchr(ofilepath, FILEPATHSEP)) && (q = strrchr(ofilepath, '.'))) {
 		if (ext) { xStrMid(ext, q - ofilepath + 1, ilen - (q - ofilepath + 1), ofilepath); }
 		if (sitename) { strncpy(sitename, p + 1, 4); sitename[4] = '\0'; }
@@ -174,8 +181,14 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 		return 0;
 	}
 
-	//get antenna type et al. from header of observation file
-	while (fgets(oneline, MAXCHARS, fp)) {
+	/* ----------------------------------------------------------
+	   get antenna type et al. from header of observation file 
+	 * anttype			| obs天线类型
+	 * rcvtype			| obs接收机类型
+	 * deleta[3]		| obs天线偏移（dX，dY，dZ）
+	 * rnxver			| obs文件的rinex版本
+	  ---------------------------------------------------------- */
+		while (fgets(oneline, MAXCHARS, fp)) {
 		if (strstr(oneline, "ANT # / TYPE") && anttype != NULL)
 			xStrMid(anttype, 20, 20, oneline);
 		if (strstr(oneline, "REC # / TYPE / VERS") && rcvtype != NULL)
@@ -192,10 +205,15 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 			break;
 	}
 
+	/* ----------------------------------------------------------
+	  根据rnxver获取obs历元开始、结束时间
+	 * cts				| obs开始时间
+	 * cte				| obs结束时间
+	  ---------------------------------------------------------- */
 	getFirstTime(rnxver, fp, cts);
 	getLastTime(rnxver, fp, cte);
 	if (norm(cts, 6) <= 1.0 || norm(cte, 6) <= 1.0) {
-		printf("*** ERROR: norm(cts,6)<=1.0||norm(cte,6)<=1.0");
+		printf("*** ERROR: norm(cts,6)<=1.0 || norm(cte,6)<=1.0");
 		return 0;
 	}
 	if (ts) *ts = epoch2time(cts);

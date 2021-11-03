@@ -53,7 +53,7 @@ static void initGlobal(PPPGlobal_t* ppp)
 	ppp->prcOpt_Ex.tropMF = TROPMF_GMF;
 
 	ppp->prcOpt_Ex.ionopnoise = 1;  //0: static  1: random walk  2:white noise
-	ppp->prcOpt_Ex.ion_const = 0;   //0: off  1: on
+	ppp->prcOpt_Ex.ion_const = 0;   //0: off     1: on
 
 	//cycle slip set
 	ppp->prcOpt_Ex.csThresGF = 0.0;
@@ -107,21 +107,21 @@ static void readcfgFile(char file[], prcopt_t* prcopt, solopt_t* solopt,
 	}
 
 	// processing options
-	prcopt->nf = 2;    //(1:l1,2:l1+l2,3:l1+l2+l5)
-	prcopt->sateph = 1;    //(0:brdc,1:precise,2:brdc+sbas,3:brdc+ssrapc,4:brdc+ssrcom)
-	prcopt->ionoopt = 2;    //(0:off  1:brdc  2:IF12  3:UC1  4:UC12  5:ion-tec)
+	prcopt->nf = 2;						// (1:L1 2:L1+L2, 3:L1+L2+L5)
+	prcopt->sateph = 1;					// (0:brdc, 1:precise, 2:brdc+sbas, 3:brdc+ssrapc, 4:brdc+ssrcom)
+	prcopt->ionoopt = 2;			    // (0:off, 1:brdc, 2:IF12, 3:UC1, 4:UC12, 5:ion-tec)
 	prcopt->niter = 1;
 	prcopt->maxinno = 30.0;
-	prcopt->dynamics = 0;
+	prcopt->dynamics = 0;				// (0:none, 1:velociy, 2:accel)
 	strcpy(prcopt->anttype, "*");
 
 	// solution options
-	solopt->times = 0;    //(0:gpst,1:utc,2:jst)
-	solopt->timeu = 3;
-	solopt->timef = 1;    //(0:tow,1:hms)
-	solopt->height = 0;    //(0:ellipsoidal,1:geodetic)
-	solopt->solstatic = 0;    //(0:all,1:single)
-	solopt->outhead = 0;
+	solopt->times = 0;					// (0:gpst, 1:utc, 2:jst)
+	solopt->timeu = 3;					// time digits under decimal point
+	solopt->timef = 1;				    // (0:tow, 1:hms)
+	solopt->height = 0;					// (0:ellipsoidal, 1:geodetic)
+	solopt->solstatic = 0;				// (0:all, 1:single)
+	solopt->outhead = 0;				// (0:no, 1:yes)
 	strcpy(solopt->sep, "");
 
 	while (!feof(fp)) {
@@ -350,7 +350,7 @@ static void readcfgFile(char file[], prcopt_t* prcopt, solopt_t* solopt,
 	PPP_Glo.prcOpt_Ex.navSys = prcopt->navsys;
 	PPP_Glo.prcOpt_Ex.posMode = prcopt->mode;
 	PPP_Glo.prcOpt_Ex.solType = prcopt->soltype;
-}
+};
 
 //auto match input files
 static void getFopt_auto(char obsfile[], char dir[], gtime_t ts, gtime_t te,
@@ -414,7 +414,7 @@ static void getFopt_auto(char obsfile[], char dir[], gtime_t ts, gtime_t te,
 
 	findAtxFile(ts, te, dir, fopt->antf);
 
-	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0) {
+	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0) { // 获取站的真值坐标
 		sprintf(tmp, "%s%csite.crd", PPP_Glo.obsDir, sep);
 		if (access(tmp, 0) != -1) getCoord_i(tmp, PPP_Glo.sitName, PPP_Glo.crdTrue);
 	}
@@ -442,7 +442,7 @@ static int preProc(char* file, procparam_t* pparam, gtime_t* ts, gtime_t* te)
 	for (i = 0; i < MAXINFILE; i++)  pparam->filopt.inf[i] = NULL;
 	for (i = 0; i < MAXOUTFILE; i++) pparam->filopt.outf[i] = NULL;
 
-	initGlobal(&PPP_Glo); // - 初始化
+	initGlobal(&PPP_Glo); // - 初始化PPP_Glo
 
 	getObsInfo(file, anttype, rcvtype, delta, ts, te, PPP_Glo.sitName,
 		PPP_Glo.ofileName, PPP_Glo.ofileName_ful, PPP_Glo.obsExt);
@@ -494,13 +494,13 @@ static void postProc(procparam_t pparam)
 //processing single ofile
 extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 {
-	procparam_t pparam;
+	procparam_t pparam; // 后处理处理结构体：处理选项、解算选项、文件选项
 	gtime_t t = { 0 }, ts = t, te = t;
 	long t1, t2;
 
 	t1 = clock();
 
-	preProc(file, &pparam, &ts, &te);
+	preProc(file, &pparam, &ts, &te); // - 对pparam做预处理
 
 	printf(" * Processing the %dth", iN);
 	if (iT > 0) printf("/%d", iT);
@@ -526,15 +526,14 @@ extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 	//processing time set
 	if (!PPP_Glo.prcOpt_Ex.bTsSet) PPP_Glo.prcOpt_Ex.ts = ts;
 	else if (timediff(ts, PPP_Glo.prcOpt_Ex.ts) > 0) PPP_Glo.prcOpt_Ex.ts = ts;
-	if (!PPP_Glo.prcOpt_Ex.bTeSet)	 PPP_Glo.prcOpt_Ex.te = te;
+	if (!PPP_Glo.prcOpt_Ex.bTeSet) PPP_Glo.prcOpt_Ex.te = te;
 	else if (timediff(te, PPP_Glo.prcOpt_Ex.te) < 0) PPP_Glo.prcOpt_Ex.te = te;
 
 	//automatically matches the corresponding files
 	getFopt_auto(file, PPP_Glo.obsDir, ts, te, pparam.prcopt, pparam.solopt, &pparam.filopt);
 
-	// post processing positioning
-	gampPos(PPP_Glo.prcOpt_Ex.ts, PPP_Glo.prcOpt_Ex.te, 0.0, 0.0,
-		&pparam.prcopt, &pparam.solopt, &pparam.filopt);
+	// post processing positioning 后处理入口！！！
+	gampPos(PPP_Glo.prcOpt_Ex.ts, PPP_Glo.prcOpt_Ex.te, 0.0, 0.0, &pparam.prcopt, &pparam.solopt, &pparam.filopt);
 
 	postProc(pparam);
 
