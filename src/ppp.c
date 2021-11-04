@@ -713,26 +713,26 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 /* temporal update of states --------------------------------------------------*/
 static void udstate_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 {
-	/* temporal update of position */
+	/* temporal update of position 位置更新 */
 	udpos_ppp(rtk);
 
-	/* temporal update of clock */
+	/* temporal update of clock 时钟更新 */
 	udclk_ppp(rtk, obs, n, nav);
 
-	/* temporal update of tropospheric parameters */
+	/* temporal update of tropospheric parameters 对流层更新 */
 	if (rtk->opt.tropopt == TROPOPT_EST || rtk->opt.tropopt == TROPOPT_ESTG) {
 		udtrop_ppp(rtk);
 	}
-	/* temporal update of ionospheric parameters */
+	/* temporal update of ionospheric parameters 电离层更新 */
 	if (rtk->opt.ionoopt == IONOOPT_UC1 || rtk->opt.ionoopt == IONOOPT_UC12) {
 		udiono_ppp(rtk, obs, n, nav);
 	}
-	/* temporal update of L5-receiver-dcb parameters */
+	/* temporal update of L5-receiver-dcb parameters dcb更新 */
 	if (rtk->opt.nf >= 3 || rtk->opt.ionoopt == IONOOPT_UC12) {
 		//if (rtk->opt.nf>=3) {
 		uddcb_ppp(rtk);
 	}
-	/* temporal update of phase-bias */
+	/* temporal update of phase-bias 模糊度更新 */
 	udbias_ppp(rtk, obs, n, nav);
 }
 /* satellite antenna phase center variation ----------------------------------*/
@@ -1352,7 +1352,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	/* 周跳检测 */
 	detecs(rtk, obs, n, nav);
 
-	/* temporal update of ekf states */
+	/* temporal update of ekf states 滤波状态更新 */
 	udstate_ppp(rtk, obs, n, nav);
 
 	nv = n * rtk->opt.nf * 2 + MAXSAT + 3;

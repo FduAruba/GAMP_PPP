@@ -296,12 +296,13 @@ static void detslp_gf(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		elev = rtk->ssat[sat - 1].azel[1] * R2D;
 		elev0 = elev;
 
-		g1 = gfmeas(obs + i, nav);
+		g1 = gfmeas(obs + i, nav); // L1-L2(m)
 
 		if (g1 == 0.0) continue;
 
 		if (elev < rtk->opt.elmin * R2D) elev = rtk->opt.elmin * R2D;
 
+		/* 根据仰角和采样间隔设置GF阈值 */
 		if (elev >= 15.0) thres = PPP_Glo.prcOpt_Ex.csThresGF;
 		else thres = -PPP_Glo.prcOpt_Ex.csThresGF / 15.0 * elev + 2 * PPP_Glo.prcOpt_Ex.csThresGF;
 
@@ -334,7 +335,6 @@ extern void detecs(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	dt = 1.0;
 	if (PPP_Glo.sample > 0.0) dt = fabs(rtk->tt / PPP_Glo.sample);
 	PPP_Glo.delEp = myRound(dt);
-
 	if (PPP_Glo.sample <= 1.5) {
 		if (fabs(rtk->tt) <= 10.0)		PPP_Glo.delEp = 1;
 		else if (fabs(rtk->tt) <= 15.0) PPP_Glo.delEp = 2;
