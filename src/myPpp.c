@@ -330,6 +330,7 @@ extern void detecs(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		rtk->ssat[i].slip[j] = 0;
 	}
 
+	/* 根据采样率设置探测历元个数delEp */
 	dt = 1.0;
 	if (PPP_Glo.sample > 0.0) dt = fabs(rtk->tt / PPP_Glo.sample);
 	PPP_Glo.delEp = myRound(dt);
