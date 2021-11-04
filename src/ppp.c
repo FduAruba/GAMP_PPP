@@ -268,11 +268,11 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 		if (lam[i] == 0.0 || obs->L[i] == 0.0 || obs->P[i] == 0.0) continue;
 		if (testsnr(0, 0, azel[1], obs->SNR[i] * 0.25, &opt->snrmask)) continue;
 
-		/* antenna phase center and phase windup correction */
+		/* antenna phase center and phase windup correction 天线相位中心dantr,dants和相位缠绕校正phw */
 		L[i] = obs->L[i] * lam[i] - dants[i] - dantr[i] - phw * lam[i];
 		P[i] = obs->P[i] - dants[i] - dantr[i];
 
-		/* P1-C1,P2-C2 dcb correction (C1->P1,C2->P2) */
+		/* P1-C1,P2-C2 dcb correction (C1->P1,C2->P2) 频内DCB(P1-C1,P2-C2)校正 */
 		if (obs->code[i] == CODE_L1C) {
 			P[i] += nav->cbias[obs->sat - 1][1];
 		}
@@ -290,6 +290,7 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 	i = 1;
 	if (lam[0] == 0.0 || lam[i] == 0.0) return;
 
+	/* IF组合系数 */
 	C1 = SQR(lam[i]) / (SQR(lam[i]) - SQR(lam[0]));
 	C2 = -SQR(lam[0]) / (SQR(lam[i]) - SQR(lam[0]));
 
@@ -654,16 +655,16 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	for (f = 0; f < NF(&rtk->opt); f++) {
 		/* reset phase-bias if expire obs outage counter */
 		for (i = 0; i < MAXSAT; i++) {
-			if (++rtk->ssat[i].outc[f] > (unsigned int)rtk->opt.maxout ||
-				rtk->opt.modear == ARMODE_INST || clk_jump) {
+			if (++rtk->ssat[i].outc[f] > (unsigned int)rtk->opt.maxout || rtk->opt.modear == ARMODE_INST || clk_jump) {
 				initx(rtk, 0.0, 0.0, IB(i + 1, f, &rtk->opt));
 			}
 		}
 		for (i = k = 0; i < n && i < MAXOBS; i++) {
 			sat = obs[i].sat;
 			j = IB(sat, f, &rtk->opt);
-			corr_meas(obs + i, nav, rtk->ssat[sat - 1].azel, &rtk->opt, dantr, dants,
-				0.0, L, P, &Lc, &Pc);
+
+			/* 计算天线相位校正后的伪距、相位和IF伪距相位 */
+			corr_meas(obs + i, nav, rtk->ssat[sat - 1].azel, &rtk->opt, dantr, dants, 0.0, L, P, &Lc, &Pc);
 
 			bias[i] = 0.0;
 
@@ -675,8 +676,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				slip[i] = rtk->ssat[sat - 1].slip[f];
 				l = 1;
 				lam = nav->lam[sat - 1];
-				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 ||
-					lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) continue;
+				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 || lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) continue;
 				ion = (obs[i].P[0] - obs[i].P[l]) / (1.0 - SQR(lam[l] / lam[0]));
 				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]);
 			}
@@ -691,8 +691,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				j = IB(i + 1, f, &rtk->opt);
 				if (rtk->x[j] != 0.0) rtk->x[j] += offset / k;
 			}
-			printf("phase-code jump corrected: %s n=%2d dt=%12.9fs\n",
-				time_str(rtk->sol.time, 0), k, offset / k / CLIGHT);
+			printf("phase-code jump corrected: %s n=%2d dt=%12.9fs\n", time_str(rtk->sol.time, 0), k, offset / k / CLIGHT);
 		}
 		for (i = 0; i < n && i < MAXOBS; i++) {
 			sat = obs[i].sat;
@@ -849,11 +848,16 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 	time2str(obs[0].time, str, 2);
 
+	/* 遍历所有卫星初始化 -----------------------------------------
+	*  1.卫星各频率的频率有效性置0
+	*  2.卫星的方位角/仰角置0
+	*  3.卫星前向/后向残差置0
+	--------------------------------------------------------------*/
 	for (i = 0; i < MAXSAT; i++) {
 		for (j = 0; j < opt->nf; j++) rtk->ssat[i].vsat[j] = 0;
 		rtk->ssat[i].azel[0] = rtk->ssat[i].azel[1] = 0.0;
 
-		if (!post) {
+		if (!post) { // 前向
 			for (j = 0; j < NFREQ; j++) {
 				rtk->ssat[i].resc_pri[j] = 0.0;
 				rtk->ssat[i].resp_pri[j] = 0.0;
@@ -869,10 +873,9 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 	for (i = 0; i < 3; i++) rr[i] = x[i];
 	if (norm(rr, 3) <= 100.0) return 0;
-	/* earth tides correction */
+	/* earth tides correction 潮汐校正 */
 	if (opt->tidecorr) {
-		tidedisp(gpst2utc(obs[0].time), rr, opt->tidecorr == 1 ? 1 : 7, &nav->erp,
-			opt->odisp[0], dr);
+		tidedisp(gpst2utc(obs[0].time), rr, opt->tidecorr == 1 ? 1 : 7, &nav->erp, opt->odisp[0], dr);
 		for (i = 0; i < 3; i++) rr[i] += dr[i];
 	}
 
@@ -883,18 +886,30 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		lam = nav->lam[sat - 1];
 		if (lam[j / 2] == 0.0 || lam[0] == 0.0) continue;
 
-		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0 ||
-			satazel(pos, e, azel + i * 2) < opt->elmin) {
+		/* 计算 ---------------------------------------------------------------
+		*  1.r			| 修正地球自转后的星-站距离（3D）
+		*  2.e			| 星-站LOS单位矢量
+		*  3.azel		| 卫星方位角/仰角
+		
+		***判定：1> 如果r <= 0，或 el < elmin，
+					则剔除该卫星，并将指示器exc[i]置1；
+				 2> 如果卫星系统不存在，或卫星有效性为0，
+					或由option设置的卫星系统不包含该卫星系统，
+					则剔除该卫星，并将指示器exc[i]置1；
+		-----------------------------------------------------------------------*/
+		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0 || satazel(pos, e, azel + i * 2) < opt->elmin) {
 			exc[i] = 1;
 			continue;
 		}
-		if (!(sys = PPP_Glo.sFlag[sat - 1].sys) || !rtk->ssat[sat - 1].vs ||
-			satexclude(obs[i].sat, svh[i], opt) || exc[i]) {
+		if (!(sys = PPP_Glo.sFlag[sat - 1].sys) || !rtk->ssat[sat - 1].vs || satexclude(obs[i].sat, svh[i], opt) || exc[i]) {
 			exc[i] = 1;
 			continue;
 		}
 
-		/* tropospheric and ionospheric model */
+		/* tropospheric and ionospheric model ----------------------------------
+		*  1.dtrp			| 对流层延迟(m)
+		*  2.dion			| 电离层延迟(m)
+		---------------------------------------------------------------------- */
 		if (!model_trop(obs[i].time, pos, azel + i * 2, opt, x, dtdx, nav, &dtrp, &shd, &vart) ||
 			!model_iono(obs[i].time, pos, azel + i * 2, opt, sat, x, nav, &dion, &vari)) {
 			continue;
@@ -1355,7 +1370,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	/* temporal update of ekf states 滤波状态更新 */
 	udstate_ppp(rtk, obs, n, nav);
 
-	nv = n * rtk->opt.nf * 2 + MAXSAT + 3;
+	nv = n * rtk->opt.nf * 2 + MAXSAT + 3; //???
 	xp = mat(rtk->nx, 1); Pp = zeros(rtk->nx, rtk->nx);
 	v = mat(nv, 1); H = mat(rtk->nx, nv); R = mat(nv, nv);
 	for (i = 0; i < MAX_ITER; i++) {

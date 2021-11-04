@@ -897,7 +897,7 @@ typedef struct {        /* navigation data type */
     double ion_irn[8];  /* IRNSS iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     int leaps;          /* leap seconds (s) */
     double lam[MAXSAT][NFREQ]; /* carrier wave lengths (m) */
-    double cbias[MAXSAT][5]; /* satellite dcb (0:p1-p2,1:p1-c1,2:p2-c2,3:p1-p3,4:p2-p3) (m) */
+    double cbias[MAXSAT][5];    /* satellite dcb (0:p1-p2,1:p1-c1,2:p2-c2,3:p1-p3,4:p2-p3) (m) */
     double rbias[MAXRCV][2][3]; /* receiver dcb (0:p1-p2,1:p1-c1,2:p2-c2) (m) */
     double wlbias[MAXSAT];   /* wide-lane bias (cycle) */
     double glo_cpbias[4];    /* glonass code-phase bias {1C,1P,2C,2P} (m) */
