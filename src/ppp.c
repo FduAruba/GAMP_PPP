@@ -890,7 +890,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		*  1.r			| 修正地球自转后的星-站距离（3D）
 		*  2.e			| 星-站LOS单位矢量
 		*  3.azel		| 卫星方位角/仰角
-		
+
 		***判定：1> 如果r <= 0，或 el < elmin，
 					则剔除该卫星，并将指示器exc[i]置1；
 				 2> 如果卫星系统不存在，或卫星有效性为0，
@@ -917,25 +917,30 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 		//ionospheric delay derived from GIM
 		if (PPP_Glo.prcOpt_Ex.ion_const) {
-			iontec(obs[i].time, nav, pos, azel + i * 2, 1, &dion_tec, &vari_tec);
-			dion_tec *= SQR(lam[0] / lam_carr[0]);
+			iontec(obs[i].time, nav, pos, azel + i * 2, 1, &dion_tec, &vari_tec); dion_tec *= SQR(lam[0] / lam_carr[0]);
 		}
 
-		/* satellite and receiver antenna model */
+		/* satellite and receiver antenna model --------------------------------
+		*  1.dants			| 卫星天线相位中心校正(m)
+		   2.dantr			| 接收机天线相位中心校正(m)
+		---------------------------------------------------------------------- */
 		satantpcv(sat, rs + i * 6, rr, nav->pcvs + sat - 1, dants);
 		antmodel(sat, &opt->pcvr, opt->antdel, azel + i * 2, 1, dantr);
 
-		/* phase windup model */
+		/* phase windup model  -------------------------------------------------
+		*  1.phw			| 天线相位中心校正(m)
+		---------------------------------------------------------------------- */
 		if (!model_phw(rtk->sol.time, sat, nav->pcvs[sat - 1].type, 2, rs + i * 6, rr, &rtk->ssat[sat - 1].phw)) {
 			continue;
 		}
 
-		//Gravitational delay correction */
+		/* Gravitational delay correction --------------------------------------
+		*  1.gravitationalDelayModel	| 重力校正(m)
+		---------------------------------------------------------------------- */
 		gravitationalDelayModel = gravitationalDelayCorrection(sys, rr, rs + i * 6);
 
 		/* corrected phase and code measurements */
-		corr_meas(obs + i, nav, azel + i * 2, &rtk->opt, dantr, dants,
-			rtk->ssat[sat - 1].phw, L, P, &Lc, &Pc);
+		corr_meas(obs + i, nav, azel + i * 2, &rtk->opt, dantr, dants, rtk->ssat[sat - 1].phw, L, P, &Lc, &Pc);
 		rtk->ssat[sat - 1].PC = Pc;
 		rtk->ssat[sat - 1].LC = Lc;
 
