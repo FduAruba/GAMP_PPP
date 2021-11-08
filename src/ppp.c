@@ -184,8 +184,7 @@ static int model_phw(gtime_t time, int sat, const char* type, int opt,
 	return 1;
 }
 /* measurement error variance ------------------------------------------------*/
-static double varerr(int sat, int sys, double el, int freq, int type,
-	const prcopt_t* opt)
+static double varerr(int sat, int sys, double el, int freq, int type, const prcopt_t* opt)
 {
 	double a = opt->err[1], b = opt->err[2];
 	double c = 1.0, fact = 1.0;
@@ -955,22 +954,26 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				if ((y = j % 2 == 0 ? L[j / 2] : P[j / 2]) == 0.0) continue;
 			}
 
-			//C=SQR(lam[j/2]/lam[0])*ionmapf(pos,azel+i*2)*(j%2==0?-1.0:1.0);
+			//C = SQR(lam[j/2]/lam[0]) * ionmapf(pos, azel+i*2) * (j%2 == 0? -1.0 : 1.0);
 			C = SQR(lam[j / 2] / lam[0]) * (j % 2 == 0 ? -1.0 : 1.0);
 			C1 = SQR(lam[1]) / (SQR(lam[1]) - SQR(lam[0]));
 			C2 = -SQR(lam[0]) / (SQR(lam[1]) - SQR(lam[0]));
 
 			nx_nv = nx * nv;
 
+			/* 观测矩阵对接收机XYZ赋值为-e[k] */
 			for (k = 0; k < nx; k++) H[k + nx_nv] = k < 3 ? -e[k] : 0.0;
 
 			/* receiver clock */
 			cdtr = 0.0;
+
+			/* GPS */
 			if (sys == SYS_GPS) {
 				ic = IC(0, opt);
 				cdtr = x[ic];
-				H[ic + nx_nv] = 1.0;
+				H[ic + nx_nv] = 1.0; /* 观测矩阵对接收机钟差dtr赋值为1 */
 			}
+			/* GLONASS */
 			if (sys == SYS_GLO) {
 				if (opt->navsys == SYS_GLO || opt->gloicb == GLOICB_OFF || opt->gloicb == GLOICB_LNF || opt->gloicb == GLOICB_QUAD) {  //handling of ISBs
 					ic = IC(0, opt);
@@ -1023,6 +1026,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 					}
 				}
 			}
+			/* BDS */
 			if (sys == SYS_CMP) {
 				ic = IC(0, opt);
 				id = IC(2, opt);
@@ -1030,6 +1034,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				H[ic + nx_nv] = 1.0;
 				H[id + nx_nv] = 1.0;
 			}
+			/* Galileo */
 			if (sys == SYS_GAL) {
 				ic = IC(0, opt);
 				id = IC(3, opt);
@@ -1037,6 +1042,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				H[ic + nx_nv] = 1.0;
 				H[id + nx_nv] = 1.0;
 			}
+			/* QZSS */
 			if (sys == SYS_QZS) {
 				ic = IC(0, opt);
 				id = IC(4, opt);
@@ -1048,13 +1054,13 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			if (opt->tropopt == TROPOPT_EST || opt->tropopt == TROPOPT_ESTG) {
 				for (k = 0; k < (opt->tropopt >= TROPOPT_ESTG ? 3 : 1); k++) {
 					ic = IT(opt);
-					H[ic + k + nx_nv] = dtdx[k];
+					H[ic + k + nx_nv] = dtdx[k]; /* 观测矩阵对对流层湿延迟ZWD赋值为dtdx[k] */
 				}
 			}
 			if (opt->ionoopt == IONOOPT_UC1 || opt->ionoopt == IONOOPT_UC12) {
 				ic = II(sat, opt);
 				if (x[ic] == 0.0) continue;
-				H[ic + nx_nv] = C;
+				H[ic + nx_nv] = C; /* 观测矩阵对电离层湿延迟I赋值为C */
 
 				//if (j%2==1) {  /* receiver-dcb */
 				//	if (j/2==0) {  // for P1 observation
@@ -1079,25 +1085,24 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			if (j % 2 == 0) {  /* phase bias */
 				ic = IB(sat, j / 2, opt);
 				if ((bias = x[ic]) == 0.0) continue;
-				H[ic + nx_nv] = 1.0;
+				H[ic + nx_nv] = 1.0; /* 观测矩阵对模糊度Ni赋值为1 */
 			}
-			/* residual */
+			/* residual 计算残差!!! */
 			v[nv] = y - (r + cdtr - CLIGHT * dts[i * 2] + dtrp + C * dion + dcb + bias - gravitationalDelayModel);
 
-			if (j % 2 == 0) rtk->ssat[sat - 1].resc[j / 2] = v[nv];
-			else        rtk->ssat[sat - 1].resp[j / 2] = v[nv];
+			if (j % 2 == 0) rtk->ssat[sat - 1].resc[j / 2] = v[nv];			/* 相位残差 */
+			else			rtk->ssat[sat - 1].resp[j / 2] = v[nv];			/* 伪距残差 */
 
 			/* variance */
-			var[nv] = varerr(obs[i].sat, sys, azel[1 + i * 2], j / 2, j % 2, opt) +
-				vart + SQR(C) * vari + var_rs[i];
-			//if (sys==SYS_GLO&&j%2==1) var[nv]+=VAR_GLO_IFB;
+			var[nv] = varerr(obs[i].sat, sys, azel[1 + i * 2], j / 2, j % 2, opt) + vart + SQR(C) * vari + var_rs[i];
+			//if (sys == SYS_GLO && j%2 == 1) var[nv]+=VAR_GLO_IFB;
 			var[nv] *= PPP_Glo.ecliF[sat - 1];
 
 			if (sys == SYS_CMP) {  //to reduce weight of the BDS GEO satellites
 				prn = PPP_Glo.sFlag[sat - 1].prn;
-				if (prn >= 1 && prn <= 5) { var[nv] *= 100.0; }
-				else if (prn >= 6 && prn <= 10) { var[nv] *= 1.0; }
-				else if (prn >= 11 && prn <= MAXPRNCMP) { var[nv] *= 1.0; }
+				if (prn >= 1 && prn <= 5) { var[nv] *= 100.0; }				/* 北斗GEO :PRN1-5 */
+				else if (prn >= 6 && prn <= 10) { var[nv] *= 1.0; }			/* 北斗IGSO:PRN6-10 */
+				else if (prn >= 11 && prn <= MAXPRNCMP) { var[nv] *= 1.0; } /* 北斗MEO :PRN11-35 */
 				else { var[nv] *= 1.0; }
 			}
 			if (sys == SYS_QZS) {
