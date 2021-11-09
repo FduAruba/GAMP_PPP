@@ -1227,8 +1227,8 @@ static void update_stat(rtk_t* rtk, const obsd_t* obs, int n, int stat)
 	for (i = 0; i < n && i < MAXOBS; i++) {
 		for (j = 0; j < opt->nf; j++) {
 			if (!rtk->ssat[obs[i].sat - 1].vsat[j]) continue;
-			rtk->ssat[obs[i].sat - 1].lock[j]++;
-			rtk->ssat[obs[i].sat - 1].outc[j] = 0;
+			rtk->ssat[obs[i].sat - 1].lock[j]++;						// 相位锁定计数++
+			rtk->ssat[obs[i].sat - 1].outc[j] = 0;						// 断开计数置0
 			if (j == 0) rtk->sol.ns[0]++;
 		}
 	}
@@ -1317,7 +1317,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		PPP_Info.t = obs[0].time;
 
 		for (i = 0; i < 3; i++) rr[i] = PPP_Glo.crdTrue[i];
-		if (norm(rr, 3) == 0.0) rr[i] = rtk->sol.rr[i];
+		if (norm(rr, 3) == 0.0) for (i = 0; i < 3; i++) rr[i] = rtk->sol.rr[i];
 		ecef2pos(rr, pos);
 
 		//the displacements by earth tides
@@ -1413,13 +1413,13 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	}
 	if (stat == SOLQ_PPP) {
 		/* ambiguity resolution in ppp */
-		/*if (ppp_ar(rtk,obs,n,exc,nav,azel,xp,Pp)&&
-		ppp_res(9,obs,n,rs,dts,var,svh,dr,exc,nav,xp,rtk,v,H,R,azel)) {
+		/*if (ppp_ar(rtk,obs,n,exc,nav,azel,xp,pp)&&
+		ppp_res(9,obs,n,rs,dts,var,svh,dr,exc,nav,xp,rtk,v,h,r,azel)) {
 		matcpy(rtk->xa,xp,rtk->nx,1);
-		matcpy(rtk->Pa,Pp,rtk->nx,rtk->nx);
+		matcpy(rtk->pa,pp,rtk->nx,rtk->nx);
 
-		for (i=0;i<3;i++) std[i]=sqrt(Pp[i+i*rtk->nx]);
-		if (norm(std,3)<MAX_STD_FIX) stat=SOLQ_FIX;
+		for (i=0;i<3;i++) std[i]=sqrt(pp[i+i*rtk->nx]);
+		if (norm(std,3)<max_std_fix) stat=solq_fix;
 		}
 		else {*/
 		rtk->nfix = 0;

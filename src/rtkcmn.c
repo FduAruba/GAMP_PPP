@@ -983,9 +983,7 @@ extern int lsq(const double* A, const double* y, int n, int m, double* x,
 * notes  : matirix stored by column-major order (fortran convention)
 *          if state x[i]==0.0, not updates state x[i]/P[i+i*n]
 *-----------------------------------------------------------------------------*/
-static int filter_(const double* x, const double* P, const double* H,
-	const double* v, const double* R, int n, int m,
-	double* xp, double* Pp)
+static int filter_(const double* x, const double* P, const double* H, const double* v, const double* R, int n, int m, double* xp, double* Pp)
 {
 	double* F = mat(n, m), * Q = mat(m, m), * K = mat(n, m), * I = eye(n);
 	double* P1 = mat(n, n), * P2 = mat(n, n), * R1 = mat(n, m);
@@ -993,11 +991,11 @@ static int filter_(const double* x, const double* P, const double* H,
 
 	matcpy(Q, R, m, m);
 	matcpy(xp, x, n, 1);
-	/* Q=H'*P*H+R */
+	/* Q = H'*P*H+R */
 	matmul("NN", n, m, n, 1.0, P, H, 0.0, F);       //F=P*H
-											//F(n,m),P(n,n),H(n,m)
+													//F(n,m),P(n,n),H(n,m)
 	matmul("TN", m, m, n, 1.0, H, F, 1.0, Q);       //Q=H'*F+R
-											//Q(m,m),H(n,m),F(n,m)
+													//Q(m,m),H(n,m),F(n,m)
 	//if (!(info=matinv(Q,m))) {
 	//    matmul("NN",n,m,m,1.0,F,Q,0.0,K);   /* K=P*H*Q^-1 */
 	//    matmul("NN",n,1,m,1.0,K,v,1.0,xp);  /* xp=x+K*v */
@@ -1022,13 +1020,13 @@ static int filter_(const double* x, const double* P, const double* H,
 	free(P1); free(P2); free(R1);
 	return info;
 }
-extern int filter(double* x, double* P, const double* H, const double* v,
-	const double* R, int n, int m)
+extern int filter(double* x, double* P, const double* H, const double* v, const double* R, int n, int m)
 {
 	double* x_, * xp_, * P_, * Pp_, * H_;
 	int i, j, k, info, * ix;
 
-	ix = imat(n, 1); for (i = k = 0; i < n; i++) if (x[i] != 0.0 && P[i + i * n] > 0.0) ix[k++] = i;
+	ix = imat(n, 1);
+	for (i = k = 0; i < n; i++) if (x[i] != 0.0 && P[i + i * n] > 0.0) ix[k++] = i; /* 获取ix的索引 */
 	x_ = mat(k, 1); xp_ = mat(k, 1); P_ = mat(k, k); Pp_ = mat(k, k); H_ = mat(k, m);
 	for (i = 0; i < k; i++) {
 		x_[i] = x[ix[i]];
