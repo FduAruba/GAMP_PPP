@@ -305,7 +305,7 @@ static void udpos_ppp(rtk_t* rtk)
 {
 	int i;
 
-	/* fixed mode */
+	/* fixed mode GAMP cfg文件中没有设施 */
 	if (rtk->opt.mode == PMODE_PPP_FIXED) {
 		for (i = 0; i < 3; i++) initx(rtk, rtk->opt.ru[i], 1E-8, i);
 		return;

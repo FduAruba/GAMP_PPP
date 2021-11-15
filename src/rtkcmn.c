@@ -293,12 +293,10 @@ extern int satno(int sys, int prn)
 		return NSATGPS + NSATGLO + NSATGAL + NSATQZS + NSATCMP + prn - MINPRNIRN + 1;
 	case SYS_LEO:
 		if (prn < MINPRNLEO || MAXPRNLEO < prn) return 0;
-		return NSATGPS + NSATGLO + NSATGAL + NSATQZS + NSATCMP + NSATIRN +
-			prn - MINPRNLEO + 1;
+		return NSATGPS + NSATGLO + NSATGAL + NSATQZS + NSATCMP + NSATIRN + prn - MINPRNLEO + 1;
 	case SYS_SBS:
 		if (prn < MINPRNSBS || MAXPRNSBS < prn) return 0;
-		return NSATGPS + NSATGLO + NSATGAL + NSATQZS + NSATCMP + NSATIRN + NSATLEO +
-			prn - MINPRNSBS + 1;
+		return NSATGPS + NSATGLO + NSATGAL + NSATQZS + NSATCMP + NSATIRN + NSATLEO + prn - MINPRNSBS + 1;
 	}
 	return 0;
 }
