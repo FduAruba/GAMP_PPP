@@ -1428,19 +1428,19 @@ typedef struct {        /* ambiguity control type */
     char flags[MAXSAT]; /* fix flags */
 } ambc_t;
 
-typedef struct {        /* RTK control/result type */
-    sol_t  sol;         /* RTK solution */
-    double rb[6];       /* base position/velocity (ecef) (m|m/s) */
-    int nx,na;          /* number of float states/fixed states */
-    double tt;          /* time difference between current and previous (s) */
-    double *x, *P;      /* float states and their covariance */
-    double *xa,*Pa;     /* fixed states and their covariance */
-    int nfix;           /* number of continuous fixes of ambiguity */
-    ambc_t ambc[MAXSAT]; /* ambibuity control */
-    ssat_t ssat[MAXSAT]; /* satellite status */
-    int neb;            /* bytes in error message buffer */
+typedef struct {            /* RTK control/result type */
+    double rb[6];           /* base position/velocity (ecef) (m|m/s) */
+    int nx,na;              /* number of float states/fixed states */
+    double tt;              /* time difference between current and previous (s) */
+    double *x, *P;          /* float states and their covariance */
+    double *xa,*Pa;         /* fixed states and their covariance */
+    int nfix;               /* number of continuous fixes of ambiguity */
+    ambc_t ambc[MAXSAT];    /* ambibuity control */
+    ssat_t ssat[MAXSAT];    /* satellite status */
+    int neb;                /* bytes in error message buffer */
     char errbuf[MAXERRMSG]; /* error message buffer */
-    prcopt_t opt;       /* processing options */
+    sol_t  sol;             /* RTK solution */
+    prcopt_t opt;           /* processing options */
 } rtk_t;
 
 typedef struct half_cyc_tag {  /* half-cycle correction list type */

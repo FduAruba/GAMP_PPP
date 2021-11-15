@@ -275,8 +275,7 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 		if (obs->code[i] == CODE_L1C) {
 			P[i] += nav->cbias[obs->sat - 1][1];
 		}
-		else if (obs->code[i] == CODE_L2C || obs->code[i] == CODE_L2X ||
-			obs->code[i] == CODE_L2L || obs->code[i] == CODE_L2S) {
+		else if (obs->code[i] == CODE_L2C || obs->code[i] == CODE_L2X || obs->code[i] == CODE_L2L || obs->code[i] == CODE_L2S) {
 			P[i] += nav->cbias[obs->sat - 1][2];
 #if 0
 			L[i] -= 0.25 * lam[i]; /* 1/4 cycle-shift */
@@ -296,7 +295,6 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 	/* P1-P2 dcb correction (P1->Pc,P2->Pc) */
 	if (P[0] != 0.0) P[0] -= C2 * nav->cbias[obs->sat - 1][0];
 	if (P[1] != 0.0) P[1] += C1 * nav->cbias[obs->sat - 1][0];
-
 	if (L[0] != 0.0 && L[i] != 0.0) *Lc = C1 * L[0] + C2 * L[i];
 	if (P[0] != 0.0 && P[i] != 0.0) *Pc = C1 * P[0] + C2 * P[i];
 }
@@ -583,8 +581,7 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		elev = rtk->ssat[sat - 1].azel[1];
 		sinel = sin(elev);
 		elev *= R2D;
-		if (PPP_Glo.prcOpt_Ex.ionopnoise == 3 || ((PPP_Glo.prcOpt_Ex.ionopnoise == 1 ||
-			PPP_Glo.prcOpt_Ex.ionopnoise == 2) && rtk->x[j] == 0.0)) {
+		if (PPP_Glo.prcOpt_Ex.ionopnoise == 3 || ((PPP_Glo.prcOpt_Ex.ionopnoise == 1 || PPP_Glo.prcOpt_Ex.ionopnoise == 2) && rtk->x[j] == 0.0)) {
 			if (PPP_Glo.prcOpt_Ex.ion_const) {
 				//ionospheric delay derived from GIM
 				iontec(obs[i].time, nav, pos, rtk->ssat[sat - 1].azel, 1, &dion_tec, &vari_tec);
@@ -595,7 +592,7 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				if (obs[i].P[0] == 0.0 || obs[i].P[k] == 0.0 || lam[0] == 0.0 || lam[k] == 0.0) {
 					continue;
 				}
-				ion = (obs[i].P[0] - obs[i].P[k]) / (1.0 - SQR(lam[k] / lam[0]));
+				ion = (obs[i].P[0] - obs[i].P[k]) / (1.0 - SQR(lam[k] / lam[0])); // 计算I1电离层延迟量
 			}
 
 			initx(rtk, ion, VAR_IONO, j);
@@ -654,6 +651,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	for (f = 0; f < NF(&rtk->opt); f++) {
 		/* reset phase-bias if expire obs outage counter */
 		for (i = 0; i < MAXSAT; i++) {
+			/* 如果[1]相位失锁数大于阈值，或[2]模糊度模式是瞬时的，或[3]发生钟跳，则初始化 */
 			if (++rtk->ssat[i].outc[f] > (unsigned int)rtk->opt.maxout || rtk->opt.modear == ARMODE_INST || clk_jump) {
 				initx(rtk, 0.0, 0.0, IB(i + 1, f, &rtk->opt));
 			}
@@ -677,7 +675,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				lam = nav->lam[sat - 1];
 				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 || lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) continue;
 				ion = (obs[i].P[0] - obs[i].P[l]) / (1.0 - SQR(lam[l] / lam[0]));
-				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]);
+				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]); // 计算模糊度
 			}
 			if (rtk->x[j] == 0.0 || slip[i] || bias[i] == 0.0) continue;
 
@@ -1407,10 +1405,12 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			break;
 		}
 	}
+
 	if (i >= MAX_ITER) {
 		sprintf(PPP_Glo.chMsg, "*** WARNING: %s ppp (%d) iteration overflows\n", str, i);
 		outDebug(OUTWIN, OUTFIL, OUTTIM);
 	}
+
 	if (stat == SOLQ_PPP) {
 		/* ambiguity resolution in ppp */
 		/*if (ppp_ar(rtk,obs,n,exc,nav,azel,xp,pp)&&
