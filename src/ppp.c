@@ -292,9 +292,10 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 	C1 = SQR(lam[i]) / (SQR(lam[i]) - SQR(lam[0]));
 	C2 = -SQR(lam[0]) / (SQR(lam[i]) - SQR(lam[0]));
 
-	/* P1-P2 dcb correction (P1->Pc,P2->Pc) */
+	/* P1-P2 dcb correction (P1->Pc,P2->Pc) 消除伪距上的D^s */
 	if (P[0] != 0.0) P[0] -= C2 * nav->cbias[obs->sat - 1][0];
 	if (P[1] != 0.0) P[1] += C1 * nav->cbias[obs->sat - 1][0];
+
 	if (L[0] != 0.0 && L[i] != 0.0) *Lc = C1 * L[0] + C2 * L[i];
 	if (P[0] != 0.0 && P[i] != 0.0) *Pc = C1 * P[0] + C2 * P[i];
 }
@@ -883,17 +884,17 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	for (i = 0; i < n && i < MAXOBS; i++) { // i遍历所有卫星
 		sat = obs[i].sat;
 		lam = nav->lam[sat - 1];
-		if (lam[j / 2] == 0.0 || lam[0] == 0.0) continue;
+		if (lam[j / 2] == 0.0 || lam[0] == 0.0) continue; // 如果波长lam == 0，则跳过本次循环，加快计算速度
 
 		/* 计算 ---------------------------------------------------------------
 		*  1.r			| 修正地球自转后的星-站距离（3D）
 		*  2.e			| 星-站LOS单位矢量
 		*  3.azel		| 卫星方位角/仰角
 
-		***判定：1> 如果r <= 0，或 el < elmin，
-					则剔除该卫星，并将指示器exc[i]置1；
-				 2> 如果卫星系统不存在，或卫星有效性为0，
-					或由option设置的卫星系统不包含该卫星系统，
+		***判定：1> 如果：(1)几何距离r <= 0; or (2)卫星仰角el < elmin，
+					则剔除该卫星，并将剔除指示器exc[i]置1；
+				 2> 如果：(1)卫星系统sys == 0; or (2)卫星有效性vs == 0;
+						 or (3)该卫星设置为被剔除 or (4)剔除指示器exc[1] == 1;
 					则剔除该卫星，并将指示器exc[i]置1；
 		-----------------------------------------------------------------------*/
 		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0 || satazel(pos, e, azel + i * 2) < opt->elmin) {
@@ -920,14 +921,14 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		}
 
 		/* satellite and receiver antenna model --------------------------------
-		*  1.dants			| 卫星天线相位中心校正(m)
+		*  1.dants			| 卫星  天线相位中心校正(m)
 		   2.dantr			| 接收机天线相位中心校正(m)
 		---------------------------------------------------------------------- */
 		satantpcv(sat, rs + i * 6, rr, nav->pcvs + sat - 1, dants);
 		antmodel(sat, &opt->pcvr, opt->antdel, azel + i * 2, 1, dantr);
 
 		/* phase windup model  -------------------------------------------------
-		*  1.phw			| 天线相位中心校正(m)
+		*  1.phw			| 卫星天线相位缠绕校正(m)
 		---------------------------------------------------------------------- */
 		if (!model_phw(rtk->sol.time, sat, nav->pcvs[sat - 1].type, 2, rs + i * 6, rr, &rtk->ssat[sat - 1].phw)) {
 			continue;
@@ -944,7 +945,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		rtk->ssat[sat - 1].LC = Lc;
 
 		/* stack phase and code residuals {L1,P1,L2,P2,...} */
-		for (j = 0; j < 2 * NF(opt); j++) {
+		for (j = 0; j < 2 * NF(opt); j++) { // j遍历双频伪距/相位
 			dcb = bias = 0.0;
 
 			if (opt->ionoopt == IONOOPT_IF12) {
