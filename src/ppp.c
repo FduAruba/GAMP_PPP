@@ -1111,7 +1111,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			}
 
 			/* reject satellite by pre-fit residuals */
-			/* 如果是验前计算，且残差v > 阈值maxinno，则剔除该卫星观测值 */
+			/* 如果是验前计算，且残差v > 阈值maxinno，则【直接剔除】该卫星观测值 */
 			if (!post && opt->maxinno > 0.0 && fabs(v[nv]) > opt->maxinno) {
 				sprintf(PPP_Glo.chMsg, "*** WARNING: outlier (%d) rejected %s sat=%s %s%d res=%9.4f el=%4.1f\n",
 					post, str, PPP_Glo.sFlag[sat - 1].id, j % 2 ? "P" : "L", j / 2 + 1, v[nv], azel[1 + i * 2] * R2D);
@@ -1120,7 +1120,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				continue;
 			}
 			/* record large post-fit residuals */
-			/* 如果是验后计算，且残差v > 阈值sqrt(var[nv]) * THRES_REJECT，则记录该卫星观测值 */
+			/* 如果是验后计算，且残差v > 阈值sqrt(var[nv]) * THRES_REJECT，则【记录】该卫星观测值到ve */
 			if (post && fabs(v[nv]) > sqrt(var[nv]) * THRES_REJECT) {
 				obsi[ne] = i; frqi[ne] = j; ve[ne] = v[nv]; ne++;
 			}
@@ -1199,7 +1199,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	if (post && ne > 0) {
 		vmax = ve[0]; maxobs = obsi[0]; maxfrq = frqi[0]; rej = 0;
 
-		/* 搜索残差最大的卫星 */
+		/* 搜索残差最大的卫星，做剔除 */
 		for (j = 1; j < ne; j++) {
 			if (fabs(vmax) >= fabs(ve[j])) continue;
 			vmax = ve[j]; maxobs = obsi[j]; maxfrq = frqi[j]; rej = j;
@@ -1334,18 +1334,18 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			sat = obs[i].sat;
 			PPP_Info.ssat[sat - 1].vs = 1;
 
-			//satellite position and clock offsets
+			//satellite position and clock offsets 卫星坐标rs和钟差dts
 			matcpy(PPP_Info.ssat[sat - 1].satpos, rs + i * 6, 6, 1);
 			PPP_Info.ssat[sat - 1].satclk = dts[i * 2] * CLIGHT;
 
-			//the eclipse satellites
+			//the eclipse satellites 剔除rs == 0的卫星
 			PPP_Info.ssat[sat - 1].flag = 0;
 			if (norm(PPP_Info.ssat[sat - 1].satpos, 3) == 0.0) PPP_Info.ssat[sat - 1].flag = 1;
 
-			//sagnac effect
+			//sagnac effect 萨格纳克效应dsag
 			PPP_Info.ssat[sat - 1].dsag = sagnac(rs + i * 6, rr);
 
-			//satellite azimuth and elevation
+			//satellite azimuth and elevation 卫星方位角/仰角
 			PPP_Info.ssat[sat - 1].azel[0] = rtk->ssat[sat - 1].azel[0];
 			PPP_Info.ssat[sat - 1].azel[1] = rtk->ssat[sat - 1].azel[1];
 
@@ -1353,7 +1353,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			cosel = cos(PPP_Info.ssat[sat - 1].azel[1]); sinel = sin(PPP_Info.ssat[sat - 1].azel[1]);
 			cosaz = cos(PPP_Info.ssat[sat - 1].azel[0]); sinaz = sin(PPP_Info.ssat[sat - 1].azel[0]);
 
-			//convert 3D tidal displacements to LOS range
+			//convert 3D tidal displacements to LOS range 场位移效应dtid
 			ecef2enu(pos, dr, enu);
 			PPP_Info.ssat[sat - 1].dtid = enu[1] * cosel * cosaz + enu[0] * cosel * sinaz + enu[2] * sinel;
 
@@ -1364,12 +1364,12 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			PPP_Info.ssat[sat - 1].shd = shd;	   // 斜干延迟
 			PPP_Info.ssat[sat - 1].wmap = dtdx[0]; // 湿延迟映射函数
 
-			//satellite and receiver antenna model
+			//satellite and receiver antenna model 卫星/接收机相位中心偏移dant
 			satantpcv(sat, rs + i * 6, rr, nav->pcvs + sat - 1, dants);
 			antmodel(sat, &opt->pcvr, opt->antdel, PPP_Info.ssat[sat - 1].azel, 1, dantr);
 			for (j = 0; j < NFREQ; j++) PPP_Info.ssat[sat - 1].dant[j] = dants[j] + dantr[j];
 
-			/* phase windup model */
+			// phase windup model 卫星相位缠绕效应phw
 			if (!model_phw(rtk->sol.time, sat, nav->pcvs[sat - 1].type, 2, rs + i * 6, rr, &PPP_Info.ssat[sat - 1].phw)) continue;
 
 			for (j = 0; j < NFREQ; j++) {
@@ -1394,7 +1394,7 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	 *  3.Pp			| xp的协方差矩阵
 	 *  4.v				| 残差向量
 	 *  5.H				| 系数矩阵
-	 *  6.R				| v的协方差矩阵
+	 *  6.R				| v的协方差矩阵,对角阵
 	-------------------------------------------------------------------------------------------------------------- */
 	nv = n * rtk->opt.nf * 2 + MAXSAT + 3;
 	xp = mat(rtk->nx, 1); Pp = zeros(rtk->nx, rtk->nx);
