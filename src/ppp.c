@@ -191,7 +191,7 @@ static double varerr(int sat, int sys, double el, int freq, int type, const prco
 	double sinel = sin(el);
 
 	fact = EFACT_GPS;
-	c = type ? opt->err[0] : 1.0;   /* type=0:phase,1:code */
+	c = type ? opt->err[0] : 1.0;   /* type = 0:phase,1:code */
 
 	if (sys == SYS_GLO) {
 		fact = EFACT_GLO;
@@ -857,13 +857,13 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		}
 		rtk->ssat[i].azel[0] = rtk->ssat[i].azel[1] = 0.0;
 
-		if (!post) { // 前向
+		if (!post) { // 验前
 			for (j = 0; j < NFREQ; j++) {
 				rtk->ssat[i].resc_pri[j] = 0.0;
 				rtk->ssat[i].resp_pri[j] = 0.0;
 			}
 		}
-		else {		// 后向
+		else {		// 验后
 			for (j = 0; j < NFREQ; j++) {
 				rtk->ssat[i].resc_pos[j] = 0.0;
 				rtk->ssat[i].resp_pos[j] = 0.0;
@@ -962,8 +962,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 			nx_nv = nx * nv;
 
-			/* 观测矩阵对接收机XYZ赋值为-e[k] */
-			for (k = 0; k < nx; k++) H[k + nx_nv] = k < 3 ? -e[k] : 0.0;
+			for (k = 0; k < nx; k++) H[k + nx_nv] = k < 3 ? -e[k] : 0.0; /*** 观测矩阵对接收机XYZ赋值为-e[k] */
 
 			/* receiver clock */
 			cdtr = 0.0;
@@ -972,7 +971,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			if (sys == SYS_GPS) {
 				ic = IC(0, opt);
 				cdtr = x[ic];
-				H[ic + nx_nv] = 1.0; /* 观测矩阵对接收机钟差dtr赋值为1 */
+				H[ic + nx_nv] = 1.0; /*** 观测矩阵对接收机钟差dtr赋值为1 */
 			}
 			/* GLONASS */
 			if (sys == SYS_GLO) {
@@ -1055,13 +1054,13 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			if (opt->tropopt == TROPOPT_EST || opt->tropopt == TROPOPT_ESTG) {
 				for (k = 0; k < (opt->tropopt >= TROPOPT_ESTG ? 3 : 1); k++) {
 					ic = IT(opt);
-					H[ic + k + nx_nv] = dtdx[k]; /* 观测矩阵对对流层湿延迟ZWD赋值为dtdx[k] */
+					H[ic + k + nx_nv] = dtdx[k]; /*** 观测矩阵对对流层湿延迟ZWD赋值为dtdx[k] */
 				}
 			}
 			if (opt->ionoopt == IONOOPT_UC1 || opt->ionoopt == IONOOPT_UC12) {
 				ic = II(sat, opt);
 				if (x[ic] == 0.0) continue;
-				H[ic + nx_nv] = C; /* 观测矩阵对电离层湿延迟I赋值为C */
+				H[ic + nx_nv] = C;				/*** 观测矩阵对电离层湿延迟I赋值为C */
 
 				//if (j%2==1) {  /* receiver-dcb */
 				//	if (j/2==0) {  // for P1 observation
@@ -1094,9 +1093,10 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			if (j % 2 == 0) rtk->ssat[sat - 1].resc[j / 2] = v[nv];			/* 相位残差 */
 			else			rtk->ssat[sat - 1].resp[j / 2] = v[nv];			/* 伪距残差 */
 
-			/* variance */
+			/* variance 计算第nv个观测方程的方差 */
 			var[nv] = varerr(obs[i].sat, sys, azel[1 + i * 2], j / 2, j % 2, opt) + vart + SQR(C) * vari + var_rs[i];
 			//if (sys == SYS_GLO && j%2 == 1) var[nv]+=VAR_GLO_IFB;
+			/* ecliF：卫星有效性标志 */
 			var[nv] *= PPP_Glo.ecliF[sat - 1];
 
 			if (sys == SYS_CMP) {  //to reduce weight of the BDS GEO satellites
@@ -1111,6 +1111,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			}
 
 			/* reject satellite by pre-fit residuals */
+			/* 如果是验前计算，且残差v > 阈值maxinno，则剔除该卫星观测值 */
 			if (!post && opt->maxinno > 0.0 && fabs(v[nv]) > opt->maxinno) {
 				sprintf(PPP_Glo.chMsg, "*** WARNING: outlier (%d) rejected %s sat=%s %s%d res=%9.4f el=%4.1f\n",
 					post, str, PPP_Glo.sFlag[sat - 1].id, j % 2 ? "P" : "L", j / 2 + 1, v[nv], azel[1 + i * 2] * R2D);
@@ -1119,30 +1120,32 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				continue;
 			}
 			/* record large post-fit residuals */
+			/* 如果是验后计算，且残差v > 阈值sqrt(var[nv]) * THRES_REJECT，则记录该卫星观测值 */
 			if (post && fabs(v[nv]) > sqrt(var[nv]) * THRES_REJECT) {
 				obsi[ne] = i; frqi[ne] = j; ve[ne] = v[nv]; ne++;
 			}
 
 			if (j % 2 == 0) rtk->ssat[sat - 1].vsat[j / 2] = 1;
 
-			if (!post) {
-				if (j == 0)      rtk->ssat[sat - 1].resc_pri[0] = v[nv];
+			/* 对每个卫星各个频率的载波/伪距残差赋值 */
+			if (!post) { // 验前
+				if (j == 0)      rtk->ssat[sat - 1].resc_pri[0] = v[nv]; // L1
 				else if (j == 1) rtk->ssat[sat - 1].resp_pri[0] = v[nv];
-				else if (j == 2) rtk->ssat[sat - 1].resc_pri[1] = v[nv];
+				else if (j == 2) rtk->ssat[sat - 1].resc_pri[1] = v[nv]; // L2
 				else if (j == 3) rtk->ssat[sat - 1].resp_pri[1] = v[nv];
-				else if (j == 4) rtk->ssat[sat - 1].resc_pri[2] = v[nv];
+				else if (j == 4) rtk->ssat[sat - 1].resc_pri[2] = v[nv]; // L5
 				else if (j == 5) rtk->ssat[sat - 1].resp_pri[2] = v[nv];
 			}
-			else {
-				if (j == 0) { rtk->ssat[sat - 1].resc_pos[0] = v[nv]; }
-				else if (j == 1) { rtk->ssat[sat - 1].resp_pos[0] = v[nv]; }
-				else if (j == 2) { rtk->ssat[sat - 1].resc_pos[1] = v[nv]; }
-				else if (j == 3) { rtk->ssat[sat - 1].resp_pos[1] = v[nv]; }
-				else if (j == 4) { rtk->ssat[sat - 1].resc_pos[2] = v[nv]; }
-				else if (j == 5) { rtk->ssat[sat - 1].resp_pos[2] = v[nv]; }
+			else {		 // 验后
+				if (j == 0)		 rtk->ssat[sat - 1].resc_pos[0] = v[nv];
+				else if (j == 1) rtk->ssat[sat - 1].resp_pos[0] = v[nv];
+				else if (j == 2) rtk->ssat[sat - 1].resc_pos[1] = v[nv];
+				else if (j == 3) rtk->ssat[sat - 1].resp_pos[1] = v[nv];
+				else if (j == 4) rtk->ssat[sat - 1].resc_pos[2] = v[nv];
+				else if (j == 5) rtk->ssat[sat - 1].resp_pos[2] = v[nv];
 			}
 
-			nv++;
+			nv++; // 当每个j循环完一次时则观测方程数nv++
 		}
 		rtk->ssat[sat - 1].azel[0] = azel[0 + i * 2];
 		rtk->ssat[sat - 1].azel[1] = azel[1 + i * 2];
@@ -1195,6 +1198,8 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	/* reject satellite with large and max post-fit residual */
 	if (post && ne > 0) {
 		vmax = ve[0]; maxobs = obsi[0]; maxfrq = frqi[0]; rej = 0;
+
+		/* 搜索残差最大的卫星 */
 		for (j = 1; j < ne; j++) {
 			if (fabs(vmax) >= fabs(ve[j])) continue;
 			vmax = ve[j]; maxobs = obsi[j]; maxfrq = frqi[j]; rej = j;
