@@ -845,13 +845,15 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 	time2str(obs[0].time, str, 2);
 
-	/* 遍历所有卫星初始化 -----------------------------------------
+	/* 遍历所有卫星/频率 初始化 ------------------------------------
 	*  1.卫星各频率的频率有效性置0
 	*  2.卫星的方位角/仰角置0
 	*  3.卫星前向/后向残差置0
 	--------------------------------------------------------------*/
-	for (i = 0; i < MAXSAT; i++) {
-		for (j = 0; j < opt->nf; j++) rtk->ssat[i].vsat[j] = 0;
+	for (i = 0; i < MAXSAT; i++) {		// i遍历所有卫星
+		for (j = 0; j < opt->nf; j++) { // j遍历所有频率
+			rtk->ssat[i].vsat[j] = 0;
+		}
 		rtk->ssat[i].azel[0] = rtk->ssat[i].azel[1] = 0.0;
 
 		if (!post) { // 前向
@@ -860,7 +862,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				rtk->ssat[i].resp_pri[j] = 0.0;
 			}
 		}
-		else {
+		else {		// 后向
 			for (j = 0; j < NFREQ; j++) {
 				rtk->ssat[i].resc_pos[j] = 0.0;
 				rtk->ssat[i].resp_pos[j] = 0.0;
@@ -869,7 +871,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	}
 
 	for (i = 0; i < 3; i++) rr[i] = x[i];
-	if (norm(rr, 3) <= 100.0) return 0;
+	if (norm(rr, 3) <= 100.0) return 0; // 为什么norm < 100 ???
 	/* earth tides correction 潮汐校正 */
 	if (opt->tidecorr) {
 		tidedisp(gpst2utc(obs[0].time), rr, opt->tidecorr == 1 ? 1 : 7, &nav->erp, opt->odisp[0], dr);
@@ -878,7 +880,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 	ecef2pos(rr, pos);
 
-	for (i = 0; i < n && i < MAXOBS; i++) {
+	for (i = 0; i < n && i < MAXOBS; i++) { // i遍历所有卫星
 		sat = obs[i].sat;
 		lam = nav->lam[sat - 1];
 		if (lam[j / 2] == 0.0 || lam[0] == 0.0) continue;
@@ -1378,9 +1380,20 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	/* temporal update of ekf states 滤波状态更新 */
 	udstate_ppp(rtk, obs, n, nav);
 
-	nv = n * rtk->opt.nf * 2 + MAXSAT + 3; //???
+	/* 残差计算和滤波 ----------------------------------------------------------------------------------------------
+	 *  1.nv			| 观测方程个数
+						| n（当前历元obs数）*2（双频）*2（载波/伪距）+[MAXSAT（全部卫星数，在含电离层约束时用到）]+3
+	 *  2.xp			| 待估参数向量
+						| [x, y, z, dtr, DCBr, ZWD, I1(n*1), N1(n*1), N2(n*1)]
+	 *  3.Pp			| xp的协方差矩阵
+	 *  4.v				| 残差向量
+	 *  5.H				| 系数矩阵
+	 *  6.R				| v的协方差矩阵
+	-------------------------------------------------------------------------------------------------------------- */
+	nv = n * rtk->opt.nf * 2 + MAXSAT + 3;
 	xp = mat(rtk->nx, 1); Pp = zeros(rtk->nx, rtk->nx);
 	v = mat(nv, 1); H = mat(rtk->nx, nv); R = mat(nv, nv);
+
 	for (i = 0; i < MAX_ITER; i++) {
 		matcpy(xp, rtk->x, rtk->nx, 1);
 		matcpy(Pp, rtk->P, rtk->nx, rtk->nx);
