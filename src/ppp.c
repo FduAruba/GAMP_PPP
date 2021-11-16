@@ -304,7 +304,7 @@ static void udpos_ppp(rtk_t* rtk)
 {
 	int i;
 
-	/* fixed mode GAMP cfg文件中没有设施 */
+	/* fixed mode GAMP_cfg文件中没有设施 */
 	if (rtk->opt.mode == PMODE_PPP_FIXED) {
 		for (i = 0; i < 3; i++) initx(rtk, rtk->opt.ru[i], 1E-8, i);
 		return;
@@ -570,6 +570,7 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	}
 	for (i = 0; i < MAXSAT; i++) {
 		j = II(i + 1, &rtk->opt);
+		/* 如果失锁历元个数大于重置阈值120，则将电离层未知量置0 */
 		if (rtk->x[j] != 0.0 && (int)rtk->ssat[i].outc[0] > gap_resion) {
 			rtk->x[j] = 0.0;
 		}
@@ -602,7 +603,7 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			PPP_Glo.ssat_Ex[sat - 1].gf = g1;
 		}
 		else if ((PPP_Glo.prcOpt_Ex.ionopnoise == 1 || PPP_Glo.prcOpt_Ex.ionopnoise == 2) && rtk->x[j] != 0.0) {
-			if (PPP_Glo.prcOpt_Ex.ionopnoise == 1)
+			if (PPP_Glo.prcOpt_Ex.ionopnoise == 1) // ionopnoise = 1（random walk）时，对其加噪
 				rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[1]) * tt;
 			else if (PPP_Glo.prcOpt_Ex.ionopnoise == 2) {
 				slip[i] = rtk->ssat[sat - 1].slip[0] || rtk->ssat[sat - 1].slip[1];
@@ -697,6 +698,9 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 			rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[0]) * tt;
 
+			/* 如果：模糊度bias[i] == 0，则不初始化
+			 * 
+			*/
 			if (bias[i] == 0.0 || (rtk->x[j] != 0.0 && !slip[i])) continue;
 
 			/* reinitialize phase-bias if detecting cycle slip */
