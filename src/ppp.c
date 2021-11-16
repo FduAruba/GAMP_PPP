@@ -700,6 +700,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 			/* 如果：模糊度bias[i] == 0，则不初始化
 			 * 
+			 * 
 			*/
 			if (bias[i] == 0.0 || (rtk->x[j] != 0.0 && !slip[i])) continue;
 
