@@ -13,7 +13,7 @@ extern int calCsThres(prcopt_t* opt, const double sample)
 			else if (sample <= 20.0)  PPP_Glo.prcOpt_Ex.csThresGF = (0.10) / (20.0 - 0.0) * sample + 0.05;
 			else if (sample <= 60.0)  PPP_Glo.prcOpt_Ex.csThresGF = 0.15;
 			else if (sample <= 100.0) PPP_Glo.prcOpt_Ex.csThresGF = 0.25;
-			else                    PPP_Glo.prcOpt_Ex.csThresGF = 0.35;
+			else                      PPP_Glo.prcOpt_Ex.csThresGF = 0.35;
 
 			b = 1;
 		}
@@ -21,7 +21,7 @@ extern int calCsThres(prcopt_t* opt, const double sample)
 			if (sample <= 1.0)        PPP_Glo.prcOpt_Ex.csThresMW = 2.5;
 			else if (sample <= 20.0)  PPP_Glo.prcOpt_Ex.csThresMW = (2.5) / (20.0 - 0.0) * sample + 2.5;
 			else if (sample <= 60.0)  PPP_Glo.prcOpt_Ex.csThresMW = 5.0;
-			else                    PPP_Glo.prcOpt_Ex.csThresMW = 7.5;
+			else                      PPP_Glo.prcOpt_Ex.csThresMW = 7.5;
 
 			b = 1;
 		}
@@ -304,7 +304,7 @@ static void detslp_gf(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 		/* 根据仰角和采样间隔设置GF阈值 */
 		if (elev >= 15.0) thres = PPP_Glo.prcOpt_Ex.csThresGF;
-		else thres = -PPP_Glo.prcOpt_Ex.csThresGF / 15.0 * elev + 2 * PPP_Glo.prcOpt_Ex.csThresGF;
+		else			  thres = -PPP_Glo.prcOpt_Ex.csThresGF / 15.0 * elev + 2 * PPP_Glo.prcOpt_Ex.csThresGF;
 
 		g0 = rtk->ssat[sat - 1].gf;
 

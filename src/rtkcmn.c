@@ -1024,9 +1024,12 @@ extern int filter(double* x, double* P, const double* H, const double* v, const 
 	int i, j, k, info, * ix;
 
 	ix = imat(n, 1);
-	for (i = k = 0; i < n; i++) { // i遍历所有未知量n，如果x[i] != 0，且对应P对应
-		if (x[i] != 0.0 && P[i + i * n] > 0.0) ix[k++] = i; /* 获取ix的索引 */
-	} 
+	for (i = k = 0; i < n; i++) { 
+		/* i遍历所有未知量n，如果x[i] != 0，且对应P对应的对角线元素 > 0，获取ix的索引 */ 
+		if (x[i] != 0.0 && P[i + i * n] > 0.0) ix[k++] = i;
+	}
+
+	/* 根据k重新定义一个小矩阵，节约内存 */
 	x_ = mat(k, 1); xp_ = mat(k, 1); P_ = mat(k, k); Pp_ = mat(k, k); H_ = mat(k, m);
 	for (i = 0; i < k; i++) {
 		x_[i] = x[ix[i]];

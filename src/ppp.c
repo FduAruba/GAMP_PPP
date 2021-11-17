@@ -266,7 +266,7 @@ static void corr_meas(const obsd_t* obs, const nav_t* nav, const double* azel,
 		L[i] = P[i] = 0.0;
 		if (lam[i] == 0.0 || obs->L[i] == 0.0 || obs->P[i] == 0.0) continue;
 		if (testsnr(0, 0, azel[1], obs->SNR[i] * 0.25, &opt->snrmask)) continue;
-
+		
 		/* antenna phase center and phase windup correction 天线相位中心dantr,dants和相位缠绕校正phw */
 		L[i] = obs->L[i] * lam[i] - dants[i] - dantr[i] - phw * lam[i];
 		P[i] = obs->P[i] - dants[i] - dantr[i];
@@ -677,7 +677,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				lam = nav->lam[sat - 1];
 				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 || lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) continue;
 				ion = (obs[i].P[0] - obs[i].P[l]) / (1.0 - SQR(lam[l] / lam[0]));
-				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]); // 计算模糊度
+				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]); // 计算模糊度bias[i]
 			}
 			if (rtk->x[j] == 0.0 || slip[i] || bias[i] == 0.0) continue;
 
@@ -698,10 +698,10 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 			rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[0]) * tt;
 
-			/* 如果：模糊度bias[i] == 0，则不初始化
-			 * 
-			 * 
-			*/
+			/* -------------------------------------------------------------------------------------------
+			 * 如果：(1)模糊度bias[i] == 0，则不初始化
+			 *		 (2)模糊度bias[i]!= 0，则根据判定x[j](是否有新卫星)和slip[i](是否周跳)，决定是否初始化
+			 --------------------------------------------------------------------------------------------*/
 			if (bias[i] == 0.0 || (rtk->x[j] != 0.0 && !slip[i])) continue;
 
 			/* reinitialize phase-bias if detecting cycle slip */
@@ -899,7 +899,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		***判定：1> 如果：(1)几何距离r <= 0; or (2)卫星仰角el < elmin，
 					则剔除该卫星，并将剔除指示器exc[i]置1；
 				 2> 如果：(1)卫星系统sys == 0; or (2)卫星有效性vs == 0;
-						 or (3)该卫星设置为被剔除 or (4)剔除指示器exc[1] == 1;
+						 or (3)该卫星设置为被剔除; or (4)剔除指示器exc[1] == 1;
 					则剔除该卫星，并将指示器exc[i]置1；
 		-----------------------------------------------------------------------*/
 		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0 || satazel(pos, e, azel + i * 2) < opt->elmin) {
@@ -1087,10 +1087,10 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 				dcb += x[id];
 				H[id + nx_nv] = 1.0;
 			}
-			if (j % 2 == 0) {  /* phase bias */
+			if (j % 2 == 0) {  /* phase bias 只有相位才有模糊度 */
 				ic = IB(sat, j / 2, opt);
 				if ((bias = x[ic]) == 0.0) continue;
-				H[ic + nx_nv] = 1.0; /* 观测矩阵对模糊度Ni赋值为1 */
+				H[ic + nx_nv] = 1.0; /*** 观测矩阵对模糊度Ni赋值为1 */
 			}
 			/* residual 计算残差!!! */
 			v[nv] = y - (r + cdtr - CLIGHT * dts[i * 2] + dtrp + C * dion + dcb + bias - gravitationalDelayModel);
@@ -1213,13 +1213,15 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		sprintf(PPP_Glo.chMsg, "*** WARNING: outlier (%d) rejected %s sat=%s %s%d res=%9.4f el=%4.1f\n",
 			post, str, PPP_Glo.sFlag[sat - 1].id, maxfrq % 2 ? "P" : "L", maxfrq / 2 + 1, vmax, azel[1 + maxobs * 2] * R2D);
 		outDebug(OUTWIN, OUTFIL, OUTTIM);
-		exc[maxobs] = 1; rtk->ssat[sat - 1].rejc[maxfrq % 2]++; stat = 0;
+		exc[maxobs] = 1; rtk->ssat[sat - 1].rejc[maxfrq % 2]++; stat = 0; // stat = 0，继续迭代；stat = 1，跳出迭代
 		ve[rej] = 0;
 	}
 
-	for (i = 0; i < nv; i++) for (j = 0; j < nv; j++) {
+	/* 配置观测协方差R */
+	for (i = 0; i < nv; i++) for (j = 0; j < nv; j++) { // i遍历所有残差观测方程nv行，j遍历所有残差观测方程nv列
 		R[i + j * nv] = i == j ? var[i] : 0.0;
 	}
+
 	return post ? stat : nv;
 }
 /* number of estimated states ------------------------------------------------*/
@@ -1392,14 +1394,14 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	udstate_ppp(rtk, obs, n, nav);
 
 	/* 残差计算和滤波 ----------------------------------------------------------------------------------------------
-	 *  1.nv			| 观测方程个数
+	 *  1.nv			| * 观测方程个数
 						| n（当前历元obs数）*2（双频）*2（载波/伪距）+[MAXSAT（全部卫星数，在含电离层约束时用到）]+3
-	 *  2.xp			| 待估参数向量
+	 *  2.xp			| * 待估参数向量
 						| [x, y, z, dtr, DCBr, ZWD, I1(n*1), N1(n*1), N2(n*1)]
-	 *  3.Pp			| xp的协方差矩阵
-	 *  4.v				| 残差向量
-	 *  5.H				| 系数矩阵
-	 *  6.R				| v的协方差矩阵,对角阵
+	 *  3.Pp			| * xp的协方差矩阵,对角线
+	 *  4.v				| * 残差向量
+	 *  5.H				| * 系数矩阵
+	 *  6.R				| * v的协方差矩阵,对角阵
 	-------------------------------------------------------------------------------------------------------------- */
 	nv = n * rtk->opt.nf * 2 + MAXSAT + 3;
 	xp = mat(rtk->nx, 1); Pp = zeros(rtk->nx, rtk->nx);
