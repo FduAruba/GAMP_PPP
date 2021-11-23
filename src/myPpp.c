@@ -175,7 +175,7 @@ extern double wlAmbMeas(const obsd_t* obs, const nav_t* nav)
 
 	lam1 = lam[i];
 	lam2 = lam[j];
-	res = (obs->L[i] - obs->L[j]) - (lam2 - lam1) / (lam1 + lam2) * (P1 / lam1 + P2 / lam2); // 返回宽巷模糊度
+	res = (obs->L[i] - obs->L[j]) - (lam2 - lam1) / (lam1 + lam2) * (P1 / lam1 + P2 / lam2); // 返回宽巷模糊度(cycle)
 
 	return res;
 }
@@ -369,6 +369,7 @@ extern void keepEpInfo(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	prcopt_t* opt = &rtk->opt;
 	double wl0, wl1, var0, var1, gf;
 
+	/* i遍历所有卫星，将载波GF组合和MW模糊度置0 */
 	for (i = 0; i < MAXSAT; i++) {
 		rtk->ssat[i].gf = 0.0;
 		PPP_Glo.ssat_Ex[i].mw[0] = 0.0;
@@ -382,10 +383,10 @@ extern void keepEpInfo(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		//if ( rtk->ssat[sat-1].azel[1]<rtk->opt.elmin )
 		//	continue;
 
-		if ((gf = gfmeas(obs + i, nav)) != 0.0)
-			rtk->ssat[sat - 1].gf = gf;
+		if ((gf = gfmeas(obs + i, nav)) != 0.0)		// 计算当前历元的GF相位，并赋值更新
+			rtk->ssat[sat - 1].gf = gf; 
 
-		if ((wl1 = wlAmbMeas(obs + i, nav)) == 0.0)
+		if ((wl1 = wlAmbMeas(obs + i, nav)) == 0.0) // 计算当前历元的MW模糊度，并赋值更新
 			continue;
 
 		wl0 = PPP_Glo.ssat_Ex[sat - 1].mw[1];
@@ -397,11 +398,11 @@ extern void keepEpInfo(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			var1 = (wl1 - wl0) * (wl1 - wl0) - var0;
 			var1 = var0 + var1 / j;
 
-			PPP_Glo.ssat_Ex[sat - 1].mw[1] = (wl0 * j + wl1) / (j + 1);
+			PPP_Glo.ssat_Ex[sat - 1].mw[1] = (wl0 * j + wl1) / (j + 1); // MW历元平滑
 			PPP_Glo.ssat_Ex[sat - 1].mwIndex++;
 			PPP_Glo.ssat_Ex[sat - 1].mwVar_c = var1;
 		}
-		else {
+		else { // 第一个历元初始化
 			PPP_Glo.ssat_Ex[sat - 1].mw[1] = wl1;
 			PPP_Glo.ssat_Ex[sat - 1].mwIndex++;
 			PPP_Glo.ssat_Ex[sat - 1].mwVar_c = 0.25;

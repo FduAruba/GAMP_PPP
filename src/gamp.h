@@ -502,6 +502,8 @@ extern "C" {
 #define OFILE_LCPC    19      //ionosphere-free carrier phase and pseudorange observations
 #define OFILE_ISB_M   20      //inter-system biases (ISBs) every 30 min for multi-GNSS
 #define OFILE_IPPP    21      //initialized files for PPP post-processing
+#define OFILE_AMBN1   22      //输出第一频率模糊度
+#define OFILE_AMBN2   23      //输出第二频率模糊度
 #define OUTWIN        1       //window output,0：off,1:on
 #define OUTFIL        1       //file output,0：off,1:on
 #define OUTTIM        1       //time output,0：off,1:on

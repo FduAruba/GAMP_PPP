@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include "gamp.h"
 
+#define SQR(x)      ((x)*(x))
+
 /* constants and macros ------------------------------------------------------*/
 
 /* solution option to field separator ----------------------------------------*/
@@ -736,6 +738,10 @@ void outAmb_IF(FILE* fp, rtk_t* rtk, gtime_t t)
 	double sow, ep[6];
 	int week;
 	double amb = 0.0;
+	/* QHY vectors */
+	int k = 0;
+	double C1 = SQR(FREQ1) / (SQR(FREQ1) - SQR(FREQ2));
+	double C2 = -SQR(FREQ2) / (SQR(FREQ1) - SQR(FREQ2));
 
 	time2epoch(t, ep);
 
@@ -763,10 +769,75 @@ void outAmb_IF(FILE* fp, rtk_t* rtk, gtime_t t)
 
 	for (i = i0; i < i1; i++) {
 		j = IB(i + 1, 0, &rtk->opt);
-		if (rtk->ssat[i].vsat[0] == 1) {
-			amb = rtk->x[j];//*FREQ1/CLIGHT;
+		k = IB(i + 1, 1, &rtk->opt);
+
+		if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
+			//amb = rtk->x[j]; //*FREQ1/CLIGHT;
+			amb = C1 * rtk->x[j] + C2 * rtk->x[k];
 		}
-		else if (rtk->ssat[i].vsat[0] == 0) {
+		else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
+			amb = 99999.0;
+		}
+		p += sprintf(p, "%9.3f%s", amb, sep);
+	}
+
+	p += sprintf(p, "\n");
+
+	n = p - (char*)buff;
+
+	if (n > 0) {
+		fwrite(buff, n, 1, fp);
+	}
+}
+
+/* output ionospheric-free (IF) ambiguity information for each satellite -------------------*/
+void outAmb_Ni(FILE* fp, rtk_t* rtk, gtime_t t, int f)
+{
+	unsigned char buff[MAXSOLMSG + 1];
+	int i, j = 0, n, i0, i1;
+	char* p = (char*)buff;
+	char* sep = " ";
+	double sow, ep[6];
+	int week;
+	double amb = 0.0;
+	/* QHY vectors */
+	int k = 0;
+	double C1 = SQR(FREQ1) / (SQR(FREQ1) - SQR(FREQ2));
+	double C2 = -SQR(FREQ2) / (SQR(FREQ1) - SQR(FREQ2));
+
+	time2epoch(t, ep);
+
+	sow = time2gpst(t, &week);
+
+	p += sprintf(p, "%04d%s%02d%s%02d%s%02d%s%02d%s%02d%s%4d%s%9.2f%s",
+		(int)ep[0], sep, (int)ep[1], sep, (int)ep[2], sep, (int)ep[3], sep, (int)ep[4], sep, (int)ep[5], sep, week, sep, sow, sep);
+
+	i0 = 0; i1 = MAXPRNGPS;
+	if ((SYS_GPS & rtk->opt.navsys)) {
+		i0 = 0; i1 = MAXPRNGPS;
+	}
+	else if ((SYS_GLO & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS; i1 = MAXPRNGPS + MAXPRNGLO;
+	}
+	else if ((SYS_GAL & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL;
+	}
+	else if ((SYS_QZS & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS;
+	}
+	else if ((SYS_CMP & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS + MAXPRNCMP;
+	}
+
+	for (i = i0; i < i1; i++) {
+		j = IB(i + 1, 0, &rtk->opt);
+		k = IB(i + 1, 1, &rtk->opt);
+
+		if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
+			amb = rtk->x[f == 0 ? j : k] * (f == 0 ? FREQ1 : FREQ2) / CLIGHT; // (cycle)
+			//amb = C1 * rtk->x[j] + C2 * rtk->x[k];
+		}
+		else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
 			amb = 99999.0;
 		}
 		p += sprintf(p, "%9.3f%s", amb, sep);
@@ -845,6 +916,8 @@ extern void outResult(rtk_t* rtk, const solopt_t* sopt)
 		if (PPP_Glo.outFp[OFILE_STEC]) outStec(PPP_Glo.outFp[OFILE_STEC], rtk, PPP_Glo.tNow);
 	}
 	if (PPP_Glo.outFp[OFILE_AMBIF]) outAmb_IF(PPP_Glo.outFp[OFILE_AMBIF], rtk, PPP_Glo.tNow);
+	if (PPP_Glo.outFp[OFILE_AMBN1]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN1], rtk, PPP_Glo.tNow, 0);
+	if (PPP_Glo.outFp[OFILE_AMBN2]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN2], rtk, PPP_Glo.tNow, 1);
 	if (PPP_Glo.outFp[OFILE_AMBMW0]) outAmb_MW(PPP_Glo.outFp[OFILE_AMBMW0], rtk, PPP_Glo.tNow, 0);
 	if (PPP_Glo.outFp[OFILE_AMBMW1]) outAmb_MW(PPP_Glo.outFp[OFILE_AMBMW1], rtk, PPP_Glo.tNow, 1);
 	if (PPP_Glo.outFp[OFILE_AMBGF]) outAmb_GF(PPP_Glo.outFp[OFILE_AMBGF], rtk, PPP_Glo.tNow);

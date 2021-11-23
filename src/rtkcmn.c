@@ -95,7 +95,7 @@ const char outtype[MAXOUTFILE][100] = {
 	{"ifamb\0   "}, {"wlamb_no\0"}, {"wlamb_yes\0"}, {"gf\0      "}, {"amb_cs\0  "},
 	{"resc1\0   "}, {"resp1\0   "}, {"resc2\0    "}, {"resp2\0   "}, {"resc3\0   "},
 	{"resp3\0   "}, {"stec\0    "}, {"isb\0      "}, {"ifb\0     "}, {"lcmpc\0   "},
-	{"ibm\0     "}, {"ippp\0    "}
+	{"ibm\0     "}, {"ippp\0    "}, {"amb_N1\0   "}, {"amb_N2\0  "},
 };
 const char* formatstrs[32] = {    /* stream format strings */
 	"RTCM 2",                   /*  0 */
