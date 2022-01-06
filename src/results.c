@@ -737,7 +737,7 @@ void outAmb_IF(FILE* fp, rtk_t* rtk, gtime_t t)
 	char* sep = " ";
 	double sow, ep[6];
 	int week;
-	double amb = 0.0;
+	double amb_IF = 0.0;
 	/* QHY vectors */
 	int k = 0;
 	double C1 = SQR(FREQ1) / (SQR(FREQ1) - SQR(FREQ2));
@@ -767,18 +767,33 @@ void outAmb_IF(FILE* fp, rtk_t* rtk, gtime_t t)
 		i0 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS + MAXPRNCMP;
 	}
 
-	for (i = i0; i < i1; i++) {
-		j = IB(i + 1, 0, &rtk->opt);
-		k = IB(i + 1, 1, &rtk->opt);
+	if (rtk->opt.ionoopt == IONOOPT_UC12) {
+		for (i = i0; i < i1; i++) {
+			j = IB(i + 1, 0, &rtk->opt);
+			k = IB(i + 1, 1, &rtk->opt);
 
-		if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
-			//amb = rtk->x[j]; //*FREQ1/CLIGHT;
-			amb = C1 * rtk->x[j] + C2 * rtk->x[k];
+			if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
+				//amb = rtk->x[j]; //*FREQ1/CLIGHT;
+				amb_IF = C1 * rtk->x[j] + C2 * rtk->x[k]; // 单位：m
+			}
+			else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
+				amb_IF = 99999.0;
+			}
+			p += sprintf(p, "%9.3f%s", amb_IF, sep);
 		}
-		else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
-			amb = 99999.0;
+	}
+	else if(rtk->opt.ionoopt == IONOOPT_IF12){
+		for (i = i0; i < i1; i++) {
+			j = IB(i + 1, 0, &rtk->opt);
+
+			if (rtk->x[j] != 0) {
+				amb_IF = rtk->x[j]; // 单位：m
+			}
+			else{
+				amb_IF = 99999.0;
+			}
+			p += sprintf(p, "%9.3f%s", amb_IF, sep);
 		}
-		p += sprintf(p, "%9.3f%s", amb, sep);
 	}
 
 	p += sprintf(p, "\n");
@@ -790,7 +805,7 @@ void outAmb_IF(FILE* fp, rtk_t* rtk, gtime_t t)
 	}
 }
 
-/* output ionospheric-free (IF) ambiguity information for each satellite -------------------*/
+/* output Ni ambiguity information for each satellite -------------------*/
 void outAmb_Ni(FILE* fp, rtk_t* rtk, gtime_t t, int f)
 {
 	unsigned char buff[MAXSOLMSG + 1];
@@ -834,8 +849,7 @@ void outAmb_Ni(FILE* fp, rtk_t* rtk, gtime_t t, int f)
 		k = IB(i + 1, 1, &rtk->opt);
 
 		if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
-			amb = rtk->x[f == 0 ? j : k] * (f == 0 ? FREQ1 : FREQ2) / CLIGHT; // (cycle)
-			//amb = C1 * rtk->x[j] + C2 * rtk->x[k];
+			amb = rtk->x[f == 0 ? j : k] * (f == 0 ? FREQ1 : FREQ2) / CLIGHT; // 单位：cycle
 		}
 		else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
 			amb = 99999.0;
@@ -844,12 +858,96 @@ void outAmb_Ni(FILE* fp, rtk_t* rtk, gtime_t t, int f)
 	}
 
 	p += sprintf(p, "\n");
+	n = p - (char*)buff;
+	if (n > 0) fwrite(buff, n, 1, fp);
+}
+
+/* output Q_IF ambiguity information for each satellite -------------------*/
+void outQ_IF(FILE* fp, rtk_t* rtk, gtime_t t)
+{
+	unsigned char buff[MAXSOLMSG + 1];
+	int i, j = 0, n, i0, i1;
+	char* p = (char*)buff;
+	char* sep = " ";
+	double sow, ep[6];
+	int week;
+	double amb = 0.0;
+	/* QHY vectors */
+	int k = 0, x = 0, nsat = 0;
+	double* Q, *tmp;
+	double C1 = SQR(FREQ1) / (SQR(FREQ1) - SQR(FREQ2));
+	double C2 = -SQR(FREQ2) / (SQR(FREQ1) - SQR(FREQ2));
+
+	time2epoch(t, ep);
+
+	sow = time2gpst(t, &week);
+
+	p += sprintf(p, "%04d%s%02d%s%02d%s%02d%s%02d%s%02d%s%4d%s%9.2f%s",
+		(int)ep[0], sep, (int)ep[1], sep, (int)ep[2], sep, (int)ep[3], sep, (int)ep[4], sep, (int)ep[5], sep, week, sep, sow, sep);
+
+	i0 = 0; i1 = MAXPRNGPS;
+	if ((SYS_GPS & rtk->opt.navsys)) {
+		i0 = 0; i1 = MAXPRNGPS;
+	}
+	else if ((SYS_GLO & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS; i1 = MAXPRNGPS + MAXPRNGLO;
+	}
+	else if ((SYS_GAL & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL;
+	}
+	else if ((SYS_QZS & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS;
+	}
+	else if ((SYS_CMP & rtk->opt.navsys)) {
+		i0 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS; i1 = MAXPRNGPS + MAXPRNGLO + MAXPRNGAL + NSATQZS + MAXPRNCMP;
+	}
+
+	Q = zeros(i1 - i0, i1 - i0); tmp = zeros(1, i1 - i0);
+	
+	if (rtk->opt.ionoopt == IONOOPT_UC12) {
+		for (i = i0; i < i1; i++) {
+			j = IB(i + 1, 0, &rtk->opt);
+			k = IB(i + 1, 1, &rtk->opt);
+
+			if (rtk->ssat[i].vsat[0] == 1 && rtk->ssat[i].vsat[1] == 1) {
+				if (x < i1 - i0) {
+					tmp[x++] = SQR(C1) * rtk->P[j + j * rtk->nx] + SQR(C2) * rtk->P[k + k * rtk->nx];
+				}
+				nsat++;
+			}
+			else if (rtk->ssat[i].vsat[0] == 0 || rtk->ssat[i].vsat[1] == 0) {
+				if (x < i1 - i0) x++;
+			}
+		}
+	}
+	else if (rtk->opt.ionoopt == IONOOPT_IF12) {
+		for (i = i0; i < i1; i++) {
+			j = IB(i + 1, 0, &rtk->opt);
+
+			if (rtk->x[j] != 0) {
+				if (x < i1 - i0) {
+					tmp[x++] = rtk->P[j + j * rtk->nx];
+				}
+				nsat++;
+			}
+			else if (rtk->x[j] == 0) {
+				if (x < i1 - i0) x++;
+			}
+		}
+	}
+
+	p += sprintf(p, "vaild sat num = %2d\n", nsat);
+
+	for (i = 0; i < i1 - i0; i++) {
+		for (j = 0; j < i1 - i0; j++) {
+			Q[j + i * (i1 - 10)] = (i == j) ? tmp[i] : 0;
+			p += sprintf(p, "%9.4f%s", Q[j + i * (i1 - 10)], sep);
+		}
+		p += sprintf(p, "\n");
+	}
 
 	n = p - (char*)buff;
-
-	if (n > 0) {
-		fwrite(buff, n, 1, fp);
-	}
+	if (n > 0) fwrite(buff, n, 1, fp);
 }
 
 //output initialized files for PPP in post-processing mode
@@ -893,7 +991,7 @@ static void outIppp(FILE* fp, rtk_t* rtk, gtime_t time)
 }
 
 //output result files
-extern void outResult(rtk_t* rtk, const solopt_t* sopt)
+extern void outResult(rtk_t* rtk, const solopt_t* sopt, const nav_t *nav)
 {
 	if (rtk->opt.ionoopt == IONOOPT_IF12 || rtk->opt.ionoopt == IONOOPT_UC1) {
 		if (PPP_Glo.outFp[OFILE_RESIC1]) outResi(PPP_Glo.outFp[OFILE_RESIC1], rtk, PPP_Glo.tNow, 1, 0, 0);
@@ -916,8 +1014,11 @@ extern void outResult(rtk_t* rtk, const solopt_t* sopt)
 		if (PPP_Glo.outFp[OFILE_STEC]) outStec(PPP_Glo.outFp[OFILE_STEC], rtk, PPP_Glo.tNow);
 	}
 	if (PPP_Glo.outFp[OFILE_AMBIF]) outAmb_IF(PPP_Glo.outFp[OFILE_AMBIF], rtk, PPP_Glo.tNow);
-	if (PPP_Glo.outFp[OFILE_AMBN1]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN1], rtk, PPP_Glo.tNow, 0);
-	if (PPP_Glo.outFp[OFILE_AMBN2]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN2], rtk, PPP_Glo.tNow, 1);
+	/* QHY out---------------------------------------------------------------------------------------*/
+	if (PPP_Glo.outFp[OFILE_AMBN1]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN1], rtk, PPP_Glo.tNow, 0); // N1
+	if (PPP_Glo.outFp[OFILE_AMBN2]) outAmb_Ni(PPP_Glo.outFp[OFILE_AMBN2], rtk, PPP_Glo.tNow, 1); // N2
+	if (PPP_Glo.outFp[OFILE_QIF]) outQ_IF(PPP_Glo.outFp[OFILE_QIF], rtk, PPP_Glo.tNow); 
+	/* ----------------------------------------------------------------------------------------------*/
 	if (PPP_Glo.outFp[OFILE_AMBMW0]) outAmb_MW(PPP_Glo.outFp[OFILE_AMBMW0], rtk, PPP_Glo.tNow, 0);
 	if (PPP_Glo.outFp[OFILE_AMBMW1]) outAmb_MW(PPP_Glo.outFp[OFILE_AMBMW1], rtk, PPP_Glo.tNow, 1);
 	if (PPP_Glo.outFp[OFILE_AMBGF]) outAmb_GF(PPP_Glo.outFp[OFILE_AMBGF], rtk, PPP_Glo.tNow);

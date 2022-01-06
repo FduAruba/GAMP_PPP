@@ -504,6 +504,7 @@ extern "C" {
 #define OFILE_IPPP    21      //initialized files for PPP post-processing
 #define OFILE_AMBN1   22      //输出第一频率模糊度
 #define OFILE_AMBN2   23      //输出第二频率模糊度
+#define OFILE_QIF     24      //输出IF模糊度协方差
 #define OUTWIN        1       //window output,0：off,1:on
 #define OUTFIL        1       //file output,0：off,1:on
 #define OUTTIM        1       //time output,0：off,1:on
@@ -898,13 +899,13 @@ typedef struct {        /* navigation data type */
     double ion_cmp[8];  /* BeiDou iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     double ion_irn[8];  /* IRNSS iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     int leaps;          /* leap seconds (s) */
-    double lam[MAXSAT][NFREQ]; /* carrier wave lengths (m) */
-    double cbias[MAXSAT][5];    /* satellite dcb (0:p1-p2,1:p1-c1,2:p2-c2,3:p1-p3,4:p2-p3) (m) */
-    double rbias[MAXRCV][2][3]; /* receiver dcb (0:p1-p2,1:p1-c1,2:p2-c2) (m) */
-    double wlbias[MAXSAT];   /* wide-lane bias (cycle) */
-    double glo_cpbias[4];    /* glonass code-phase bias {1C,1P,2C,2P} (m) */
-    char glo_fcn[MAXPRNGLO+1]; /* glonass frequency channel number + 8 */
-    pcv_t pcvs[MAXSAT]; /* satellite antenna pcv */
+    double lam[MAXSAT][NFREQ];   /* carrier wave lengths (m) */
+    double cbias[MAXSAT][5];     /* satellite dcb (0:p1-p2,1:p1-c1,2:p2-c2,3:p1-p3,4:p2-p3) (m) */
+    double rbias[MAXRCV][2][3];  /* receiver  dcb (0:p1-p2,1:p1-c1,2:p2-c2) (m) */
+    double wlbias[MAXSAT];       /* wide-lane bias (cycle) */
+    double glo_cpbias[4];        /* glonass code-phase bias {1C,1P,2C,2P} (m) */
+    char glo_fcn[MAXPRNGLO+1];   /* glonass frequency channel number + 8 */
+    pcv_t pcvs[MAXSAT];          /* satellite antenna pcv */
 } nav_t;
 
 typedef struct {        /* station parameter type */
@@ -1509,7 +1510,7 @@ EXPORT int findGross(int ppp, int bMulGnss, double *v, const int nv, const int n
 EXPORT int lsqPlus(const double *A, const double *y, const int nx, const int nv, double *x, double *Q);
 //EXPORT double svpco2dist(gtime_t time, const double *rr, const double *rs, int sat, const nav_t *nav);
 EXPORT void outDebug(int bWinOut, int bFpOut, int bTMOut);
-EXPORT void outResult(rtk_t *rtk,const solopt_t *sopt);
+EXPORT void outResult(rtk_t *rtk,const solopt_t *sopt, nav_t *nav);
 EXPORT int calCsThres(prcopt_t *opt, const double sample);
 EXPORT void obsScan_SPP(const prcopt_t *popt, obsd_t *obs, const int nobs, int *nValid);
 EXPORT void obsScan_PPP(const prcopt_t *popt, obsd_t *obs, const int nobs, int *nValid);

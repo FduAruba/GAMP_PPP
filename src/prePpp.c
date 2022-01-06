@@ -9,7 +9,7 @@ static void initGlobal(PPPGlobal_t* ppp)
 	gtime_t gt0 = { 0 };
 	ssatEx_t ssat_EX0 = { {0} };
 
-	ppp->prcOpt_Ex.navSys = SYS_GPS;
+	ppp->prcOpt_Ex.navSys  = SYS_GPS;
 	ppp->prcOpt_Ex.solType = 0;
 	ppp->prcOpt_Ex.posMode = PMODE_PPP_STATIC;
 	ppp->prcOpt_Ex.rcvType[0] = '\0';
@@ -444,8 +444,7 @@ static int preProc(char* file, procparam_t* pparam, gtime_t* ts, gtime_t* te)
 
 	initGlobal(&PPP_Glo); // - ³õÊ¼»¯PPP_Glo
 
-	getObsInfo(file, anttype, rcvtype, delta, ts, te, PPP_Glo.sitName,
-		PPP_Glo.ofileName, PPP_Glo.ofileName_ful, PPP_Glo.obsExt);
+	getObsInfo(file, anttype, rcvtype, delta, ts, te, PPP_Glo.sitName, PPP_Glo.ofileName, PPP_Glo.ofileName_ful, PPP_Glo.obsExt);
 
 	xStrMid(PPP_Glo.prcOpt_Ex.rcvType, 0, 20, rcvtype);
 	xStrMid(pparam->prcopt.anttype, 0, 20, anttype);

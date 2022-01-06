@@ -232,7 +232,7 @@ static void detslp_mw(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		dtmp = el * R2D; // 将仰角转换成角度
 
 		if (el >= rad_20) thres = PPP_Glo.prcOpt_Ex.csThresMW;
-		else	 thres = -PPP_Glo.prcOpt_Ex.csThresMW * 0.1 * dtmp + 3 * PPP_Glo.prcOpt_Ex.csThresMW;
+		else			  thres = -PPP_Glo.prcOpt_Ex.csThresMW * 0.1 * dtmp + 3 * PPP_Glo.prcOpt_Ex.csThresMW;
 
 		dmw[sat - 1] = wl1 - wl0;
 
@@ -384,7 +384,7 @@ extern void keepEpInfo(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		//	continue;
 
 		if ((gf = gfmeas(obs + i, nav)) != 0.0)		// 计算当前历元的GF相位，并赋值更新
-			rtk->ssat[sat - 1].gf = gf; 
+			rtk->ssat[sat - 1].gf = gf;
 
 		if ((wl1 = wlAmbMeas(obs + i, nav)) == 0.0) // 计算当前历元的MW模糊度，并赋值更新
 			continue;

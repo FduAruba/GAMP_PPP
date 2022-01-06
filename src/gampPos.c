@@ -798,7 +798,7 @@ static void procpos(rtk_t* rtk, const prcopt_t* popt, const solopt_t* sopt, int 
 		else if (i == 0) continue;
 
 		if (mode == 0) {  /* forward/backward */
-			outResult(rtk, sopt);
+			outResult(rtk, sopt, &navs);
 
 			if (!solstatic && PPP_Glo.outFp[0])
 				outsol(PPP_Glo.outFp[0], &rtk->sol, sopt, PPP_Glo.iEpoch);
@@ -868,6 +868,7 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 *          char   *outfile  I   output file ("":stdout, see below)
 *          char   *rov      I   rover id list        (separated by " ")
 *          char   *base     I   base station id list (separated by " ")
+* 
 * return : status (0:ok,0>:error,1:aborted)
 * notes  : input files should contain observation data, navigation data, precise
 *          ephemeris/clock (optional), sbas log file (optional), ssr message

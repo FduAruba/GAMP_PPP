@@ -95,7 +95,7 @@ const char outtype[MAXOUTFILE][100] = {
 	{"ifamb\0   "}, {"wlamb_no\0"}, {"wlamb_yes\0"}, {"gf\0      "}, {"amb_cs\0  "},
 	{"resc1\0   "}, {"resp1\0   "}, {"resc2\0    "}, {"resp2\0   "}, {"resc3\0   "},
 	{"resp3\0   "}, {"stec\0    "}, {"isb\0      "}, {"ifb\0     "}, {"lcmpc\0   "},
-	{"ibm\0     "}, {"ippp\0    "}, {"amb_N1\0   "}, {"amb_N2\0  "},
+	{"ibm\0     "}, {"ippp\0    "}, {"amb_N1\0   "}, {"amb_N2\0  "}, {"Q_IF\0    "},
 };
 const char* formatstrs[32] = {    /* stream format strings */
 	"RTCM 2",                   /*  0 */
@@ -690,6 +690,7 @@ extern int* imat(int n, int m)
 extern double* zeros(int n, int m)
 {
 	double* p;
+	int i, j;
 
 #if NOCALLOC
 	if ((p = mat(n, m))) for (n = n * m - 1; n >= 0; n--) p[n] = 0.0;
@@ -698,6 +699,7 @@ extern double* zeros(int n, int m)
 	if (!(p = (double*)calloc(sizeof(double), n * m))) {
 		fatalerr("matrix memory allocation error: n=%d,m=%d\n", n, m);
 	}
+	for (i = 0; i < n; i++) for (j = 0; j < m; j++) p[j + i * m] = 0;
 #endif
 	return p;
 }
