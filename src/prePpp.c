@@ -93,14 +93,15 @@ static void initGlobal(PPPGlobal_t* ppp)
 }
 
 //read configure file
-static void readcfgFile(char file[], prcopt_t* prcopt, solopt_t* solopt,
-	filopt_t* filopt)
+static void readcfgFile(char file[], prcopt_t* prcopt, solopt_t* solopt, filopt_t* filopt)
 {
-	FILE* fp;
-	int i, j, k, n;
-	double dt[6] = { 0.0 };
-	char* p, line[MAXCHARS];
-	int debug = 0;
+	/* 局部变量定义 ===================================================================== */
+	FILE* fp;						// 读cfg文件指针
+	int i, j, k, n;					// 循环遍历变量
+	double dt[6] = { 0.0 };			// 
+	char* p, line[MAXCHARS];		//
+	int debug = 0;					//
+	/* ================================================================================== */
 
 	if ((fp = fopen(file, "r")) == NULL) {
 		return;
@@ -117,7 +118,7 @@ static void readcfgFile(char file[], prcopt_t* prcopt, solopt_t* solopt,
 
 	// solution options
 	solopt->times = 0;					// (0:gpst, 1:utc, 2:jst)
-	solopt->timeu = 3;					// time digits under decimal point
+	solopt->timeu = 3;					// time digits under decimal point 小数位
 	solopt->timef = 1;				    // (0:tow, 1:hms)
 	solopt->height = 0;					// (0:ellipsoidal, 1:geodetic)
 	solopt->solstatic = 0;				// (0:all, 1:single)
@@ -432,9 +433,11 @@ static void getFopt_auto(char obsfile[], char dir[], gtime_t ts, gtime_t te,
 //get informations of start and end time etc.
 static int preProc(char* file, procparam_t* pparam, gtime_t* ts, gtime_t* te)
 {
-	int i;
-	double delta[3];
-	char anttype[100], rcvtype[40];
+	/* 局部变量定义 ===================================================================== */
+	int i;										// 循环体遍历变量
+	double delta[3];						    // 偏移量（H，E，N）
+	char anttype[100], rcvtype[40];			    // 天线类型、接收机类型
+	/* ================================================================================== */
 
 	pparam->filopt = filopt_default;
 	pparam->solopt = solopt_default;
@@ -442,18 +445,20 @@ static int preProc(char* file, procparam_t* pparam, gtime_t* ts, gtime_t* te)
 	for (i = 0; i < MAXINFILE; i++)  pparam->filopt.inf[i] = NULL;
 	for (i = 0; i < MAXOUTFILE; i++) pparam->filopt.outf[i] = NULL;
 
-	initGlobal(&PPP_Glo); // - 初始化PPP_Glo
+	// 1.初始化PPP_Glo结构体
+	initGlobal(&PPP_Glo);
 
+	// 获取obs信息
 	getObsInfo(file, anttype, rcvtype, delta, ts, te, PPP_Glo.sitName, PPP_Glo.ofileName, PPP_Glo.ofileName_ful, PPP_Glo.obsExt);
 
-	xStrMid(PPP_Glo.prcOpt_Ex.rcvType, 0, 20, rcvtype);
-	xStrMid(pparam->prcopt.anttype, 0, 20, anttype);
+	xStrMid(PPP_Glo.prcOpt_Ex.rcvType, 0, 20, rcvtype);  // 接收机型号
+	xStrMid(pparam->prcopt.anttype, 0, 20, anttype);	 // 天线型号
 	//antdel: E,N,U
 	pparam->prcopt.antdel[0] = delta[1];
 	pparam->prcopt.antdel[1] = delta[2];
 	pparam->prcopt.antdel[2] = delta[0];
 
-	//allocation for 'inf' and 'outf' of 'filopt'
+	//allocation for 'inf' and 'outf' of 'filopt' 分配内存空间
 	for (i = 0; i < MAXINFILE; i++) {
 		if (!(pparam->filopt.inf[i] = (char*)malloc(MAXSTRPATH))) {
 			for (i--; i >= 0; i--) free(pparam->filopt.inf[i]);
@@ -493,13 +498,17 @@ static void postProc(procparam_t pparam)
 //processing single ofile
 extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 {
-	procparam_t pparam;					// 后处理处理结构体：[1] 处理选项、[2] 解算选项、[3] 文件选项
-	gtime_t t = { 0 }, ts = t, te = t;
-	long t1, t2;
+	/* 局部变量定义 ===================================================================== */
+	procparam_t pparam;		// 后处理处理结构体：[1] 处理选项、[2] 解算选项、[3] 文件选项
+	gtime_t ts = { 0 };		// obs开始时间
+	gtime_t te = { 0 };		// obs结束之间
+	long t1, t2;			// t1：程序开始时间 t2：程序结束时间
+	/* ================================================================================== */
 
-	t1 = clock(); // 程序开始时间
+	t1 = clock();
 
-	preProc(file, &pparam, &ts, &te); // - 对pparam做预处理
+	// 1.对pparam做预处理
+	preProc(file, &pparam, &ts, &te);
 
 	printf(" * Processing the %dth", iN);
 	if (iT > 0) printf("/%d", iT);

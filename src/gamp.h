@@ -1260,42 +1260,42 @@ typedef struct {
 } prcOptEx_t;
 
 typedef struct {
-	char   sitName[5];      //site name
-	double crdTrue[4];      //True coordinates from SINEX or GPS-only static PPP
-	double rr[3];           //rover coordinate(XYZ)
+	char   sitName[5];      // site name
+	double crdTrue[4];      // True coordinates from SINEX or GPS-only static PPP
+	double rr[3];           // rover coordinate(XYZ)
 
-	int nEpoch;             //the number of observation epoches
-	int iEpoch;             //the current epoch index
-	int iObsu;              //observation data index
-	int revs;               //filtering direction(0:forward;1:backward)
-	sol_t *solf;            //forward solutions
-	sol_t *solb;            //backward solutions
-	int iSolf;              //current index of forward solutions
-	int iSolb;              //current index of backward solutions
+	int nEpoch;             // the number of observation epoches
+	int iEpoch;             // the current epoch index
+	int iObsu;              // observation data index
+	int revs;               // filtering direction([0] forward [1] backward)
+	sol_t *solf;            // forward solutions
+	sol_t *solb;            // backward solutions
+	int iSolf;              // current index of forward solutions
+	int iSolb;              // current index of backward solutions
 
-	double dintv;           //observation sampling interval
-	int delEp;              //the number of epochs between the current epoch and previous epoch
+	double dintv;           // observation sampling interval
+	int delEp;              // the number of epochs between the current epoch and previous epoch
 	double sample;
 
     double zhd;
 
-	double obs0[MAXPRNGPS][4];
-	int clkJump;
+	double obs0[MAXPRNGPS][4];  // obs data(GPS)(P1,L1,P2,L2)
+	int clkJump;                // 钟跳
 
-	gtime_t tNow;          //current time
-	gtime_t t_30min;       //every 30 min
-    double isb_30min;      //every 30 min
+	gtime_t tNow;          // current time
+	gtime_t t_30min;       // every 30 min
+    double isb_30min;      // every 30 min
 	double ctNow[6];
-	double sowNow;         //seconds of week
+	double sowNow;         // seconds of week
 
-	char chMsg[MAXCHARS];  //for output message
-	char chTime[MAXCHARS]; //for output time tag
+	char chMsg[MAXCHARS];  // for output message
+	char chTime[MAXCHARS]; // for output time tag
 
-	int iTag;              //用于标示多向滤波中到了哪个状态
+	int iTag;              // 用于标示多向滤波中到了哪个状态
 
-	double lam[MAXSAT][NFREQ];  //carrier wavelength
+	double lam[MAXSAT][NFREQ];  // carrier wavelength
 
-	int fnGlo[MAXPRNGLO+1];    //GLONASS frequency number
+	int fnGlo[MAXPRNGLO+1];    // GLONASS frequency number
 
 	int bAllSlip;
 	int bSlip[MAXSAT];
@@ -1312,12 +1312,12 @@ typedef struct {
 	int prcType;					// 处理模式：[0] single file  [1] batch files
 	char inputPath[MAXSTRPATH];     // obs文件输入路径
 	char outFolder[MAXSTRPATH];
-	FILE* outFp[MAXOUTFILE];       //输出文件指针
+	FILE* outFp[MAXOUTFILE];        // 输出文件指针
 
-	char obsExt[30];
-	char ofileName[100];                   //obs file name
-	char ofileName_ful[MAXSTRPATH];        //obs full file name
-	char obsDir[MAXSTRPATH];	           //obs dir
+	char obsExt[30];                       // obs ext
+	char ofileName[100];                   // obs file name
+	char ofileName_ful[MAXSTRPATH];        // obs full file name
+	char obsDir[MAXSTRPATH];	           // obs dir
 
 	satFlag_t sFlag[MAXSAT];
 	ssatEx_t ssat_Ex[MAXSAT];

@@ -53,7 +53,7 @@ extern void trimSpace(char* strsrc)
 	str[0] = '\0';
 	strcpy(str, strsrc);
 
-	ps = 0;
+	ps = 0; // 开始位置
 	for (i = 0; i < len; i++) {
 		if (*(str + i) != ' ' && *(str + i) != '\t') {
 			ps = i;
@@ -61,7 +61,7 @@ extern void trimSpace(char* strsrc)
 		}
 	}
 
-	pe = ps;
+	pe = ps; // 结束位置
 	for (j = len - 1; j >= 0; j--) {
 		if (*(str + j) != ' ' && *(str + j) != '\t' && *(str + j) != '\n') {
 			pe = j;

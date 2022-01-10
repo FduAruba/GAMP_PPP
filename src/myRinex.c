@@ -152,14 +152,18 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 	double delta[3], gtime_t* ts, gtime_t* te, char* sitename,
 	char* filename, char* filename_ful, char* ext)
 {
-	FILE* fp = NULL;
-	char* p, * q;
-	char oneline[300] = { '\0' };
-	int ilen = strlen(ofilepath);
-	double cts[6], cte[6], rnxver = 2.11;
+	/* 局部变量定义 ===================================================================== */
+	FILE* fp = NULL;							// obs文件指针
+	char* p, * q;								// 读字符串指针
+	char oneline[300] = { '\0' };				// obs一行数据字符串
+	int ilen = strlen(ofilepath);				// obs路径长度
+	double cts[6], cte[6], rnxver = 2.11;		// obs开始/结束时间，rnx版本号
+	/* ================================================================================= */
 
-	if ((p = strrchr(ofilepath, FILEPATHSEP)))
+	// 获取obs文件夹路径，存于PPP_Glo.obsDir中
+	if ((p = strrchr(ofilepath, FILEPATHSEP))){
 		xStrMid(PPP_Glo.obsDir, 0, p - ofilepath, ofilepath);
+	}
 
 	/* -----------------------------------------------------------
 	   根据输入文件ofile路径，解析获得：
@@ -185,7 +189,7 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 	   get antenna type et al. from header of observation file 
 	 * anttype			| obs天线类型
 	 * rcvtype			| obs接收机类型
-	 * deleta[3]		| obs天线偏移（dX，dY，dZ）
+	 * deleta[3]		| obs天线偏移（H，E，N）
 	 * rnxver			| obs文件的rinex版本
 	  ---------------------------------------------------------- */
 		while (fgets(oneline, MAXCHARS, fp)) {
