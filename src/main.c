@@ -17,20 +17,27 @@ extern void settime(gtime_t time) {}
 /* 执行cfg文件 ---------------------------------------------------------------*/
 static int proccfgfile(char cfgfile[])
 {
-	FILE* fp = NULL;
-	char* p;
-	char tmp[MAXSTRPATH] = { '\0' };
+	/* 局部变量定义 ======================================================= */
+	FILE* fp = NULL;					// cfg文件指针
+	char* p;							// cfg文件每行字符指针
+	char tmp[MAXSTRPATH] = { '\0' };	// cfg文件每行字符串
+	/* ==================================================================== */
 
 	// initialization
 	PPP_Glo.prcType      = -1;
 	PPP_Glo.outFolder[0] = '\0';
 	PPP_Glo.inputPath[0] = '\0';
 
+	// 尝试打开cfg文件，若不存在则返回0
 	if ((fp = fopen(cfgfile, "r")) == NULL) {
 		printf("*** ERROR: open configure file failed, please check it!\n");
 		return 0;
 	}
 
+	/* 获取cfg文件中obs文件的处理模式&路径 ----------------------------------
+	 *  1.PPP_Glo.prcType		| 处理模式 [0] 单文件 [1] 批处理
+		2.PPP_Glo.inputPath		| 文件路径
+	 ---------------------------------------------------------------------- */
 	while (!feof(fp)) {
 		tmp[0] = '\0';
 		fgets(tmp, MAXSTRPATH, fp);
@@ -45,8 +52,8 @@ static int proccfgfile(char cfgfile[])
 				p = strrchr(tmp, '=');
 				sscanf(p + 1, "%[^,]", PPP_Glo.inputPath);
 
-				trimSpace(PPP_Glo.inputPath);					// - 清除路径空格
-				cutFilePathSep(PPP_Glo.inputPath);				// - 截取最后一级文件/目录名
+				trimSpace(PPP_Glo.inputPath);					// 清除路径空格
+				cutFilePathSep(PPP_Glo.inputPath);				// 截取最后一级文件/目录名
 			}
 			else {
 				printf("*** ERROR: read obs files path error!");
@@ -57,15 +64,16 @@ static int proccfgfile(char cfgfile[])
 	}
 	fclose(fp);
 
-	if (PPP_Glo.prcType < 0 || PPP_Glo.prcType>2) {
+	// 根据prcType选择后续处理步骤，[0] 单文件 [1] 批处理 [else] 异常
+	switch (PPP_Glo.prcType) {
+	case 0:
+		procOneFile(PPP_Glo.inputPath, cfgfile, 0, 1);
+	case 1:
+		batchProc(PPP_Glo.inputPath, cfgfile);
+	default:
 		printf("*** ERROR: read obs files path error!");
 		return 0;
 	}
-
-	if (PPP_Glo.prcType == 0)
-		procOneFile(PPP_Glo.inputPath, cfgfile, 0, 1);			// - 单个obs处理入口
-	else if (PPP_Glo.prcType == 1)
-		batchProc(PPP_Glo.inputPath, cfgfile);
 
 	return 1;
 }

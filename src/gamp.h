@@ -1309,8 +1309,8 @@ typedef struct {
 
 	double ecliF[MAXSAT];
 
-	int prcType;					/* 0: single file 1：batch files */
-	char inputPath[MAXSTRPATH];
+	int prcType;					// 处理模式：[0] single file  [1] batch files
+	char inputPath[MAXSTRPATH];     // obs文件输入路径
 	char outFolder[MAXSTRPATH];
 	FILE* outFp[MAXOUTFILE];       //输出文件指针
 

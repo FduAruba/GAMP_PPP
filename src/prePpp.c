@@ -493,7 +493,7 @@ static void postProc(procparam_t pparam)
 //processing single ofile
 extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 {
-	procparam_t pparam; // 后处理处理结构体：处理选项、解算选项、文件选项
+	procparam_t pparam;					// 后处理处理结构体：[1] 处理选项、[2] 解算选项、[3] 文件选项
 	gtime_t t = { 0 }, ts = t, te = t;
 	long t1, t2;
 
