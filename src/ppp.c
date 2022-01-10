@@ -961,7 +961,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			}
 
 			//C = SQR(lam[j/2]/lam[0]) * ionmapf(pos, azel+i*2) * (j%2 == 0? -1.0 : 1.0);
-			C = SQR(lam[j / 2] / lam[0]) * (j % 2 == 0 ? -1.0 : 1.0);
+			C  = SQR(lam[j / 2] / lam[0]) * (j % 2 == 0 ? -1.0 : 1.0);
 			C1 = SQR(lam[1]) / (SQR(lam[1]) - SQR(lam[0]));
 			C2 = -SQR(lam[0]) / (SQR(lam[1]) - SQR(lam[0]));
 

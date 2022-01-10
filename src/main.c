@@ -20,7 +20,7 @@ static int proccfgfile(char cfgfile[])
 	FILE* fp = NULL;
 	char* p, tmp[MAXSTRPATH] = { '\0' };
 
-	//initialization
+	// initialization
 	PPP_Glo.prcType = -1;
 	PPP_Glo.outFolder[0] = '\0';
 	PPP_Glo.inputPath[0] = '\0';

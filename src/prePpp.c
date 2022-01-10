@@ -497,7 +497,7 @@ extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 	gtime_t t = { 0 }, ts = t, te = t;
 	long t1, t2;
 
-	t1 = clock();
+	t1 = clock(); // 程序开始时间
 
 	preProc(file, &pparam, &ts, &te); // - 对pparam做预处理
 
