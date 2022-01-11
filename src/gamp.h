@@ -1253,10 +1253,10 @@ typedef struct {
 	double prn_iono;
 
 	// processing time set
-	int bTsSet;
-	int bTeSet;
-	gtime_t ts;
-	gtime_t te;
+	int bTsSet;             // start_time_opt:[0] from obs [1] from inp
+	int bTeSet;             // end_time_opt  :[0] from obs [1] from inp
+	gtime_t ts;             // start_time
+	gtime_t te;             // end_time
 } prcOptEx_t;
 
 typedef struct {
@@ -1267,7 +1267,7 @@ typedef struct {
 	int nEpoch;             // the number of observation epoches
 	int iEpoch;             // the current epoch index
 	int iObsu;              // observation data index
-	int revs;               // filtering direction([0] forward [1] backward)
+	int revs;               // filtering direction:[0] forward [1] backward
 	sol_t *solf;            // forward solutions
 	sol_t *solb;            // backward solutions
 	int iSolf;              // current index of forward solutions

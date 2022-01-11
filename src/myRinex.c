@@ -228,12 +228,16 @@ extern int getObsInfo(char ofilepath[], char anttype[], char rcvtype[],
 	return 1;
 }
 
-//find sinex file
-extern int findSnxFile(const gtime_t ts, const gtime_t te, char dir[], char snxpaths[])
+/* find sinex file------------------------------------------------------------------------
+ * 查找sinex文件是否在dir[]中存在，若存在则获取其路径，保存到snxpaths[]中
+ ---------------------------------------------------------------------------------------- */
+extern int findSnxFile(const gtime_t ts, const gtime_t te, const char dir[], char snxpaths[])
 {
-	int weeks, weeke;
-	char tmp[MAXSTRPATH];
-	char sep = (char)FILEPATHSEP;
+	/* 局部变量定义 ===================================================================== */
+	int weeks, weeke;                       // 开始周/结束周
+	char tmp[MAXSTRPATH];					// 输入字符串
+	char sep = (char)FILEPATHSEP;			// 分隔符"\\"
+	/* ================================================================================== */
 
 	time2gpst(ts, &weeks);
 	time2gpst(te, &weeke);
@@ -243,7 +247,7 @@ extern int findSnxFile(const gtime_t ts, const gtime_t te, char dir[], char snxp
 		return 0;
 	}
 
-	sprintf(tmp, "%s%cigs%4d.snx", dir, sep, weeks);
+	sprintf(tmp, "%s%cigs%4d.snx", dir, sep, weeks); // 输入snx文件路径
 
 	if ((access(tmp, 0)) == -1) {  //for windows
 	//if((access(tmp,F_OK))==-1) {  //for linux
@@ -257,26 +261,39 @@ extern int findSnxFile(const gtime_t ts, const gtime_t te, char dir[], char snxp
 }
 
 //get navigation file
-extern int findNavFile(const gtime_t ts, const gtime_t te, char obspath[],
-	char* navpaths[], const int index, const int sys)
+extern int findNavFile(const gtime_t ts, const gtime_t te, char obspath[], char* navpaths[], const int index, const int sys)
 {
-	gtime_t t;
-	double secs, sece, ct[6];
-	int weeks, weeke, days, daye, n, i, w, d, doy, index_ = 0, year;
-	char tmp[MAXSTRPATH] = { '\0' }, dir[MAXSTRPATH] = { '\0' }, * p, file[MAXSTRPATH], c = 'n';
+	/* 局部变量定义 ===================================================================== */
+	gtime_t t;								// GPS时间变量
+	double ct[6];							// [年 月 日 时 分 秒]
+	double secs, sece;						// 开始秒/结束秒
+	int weeks, weeke, days, daye;			// 开始周/结束周/开始周内日/结束周内日
+	int n;									// 当前obs所跨天数
+	int i;									// 循环遍历变量
+	int w, d, doy, year;					// 周/周内日/年内日/年(yy)
+	int index_ = 0;							// nav文件计数
+	char tmp[MAXSTRPATH] = { '\0' };		// 由obs文件对应的nav文件路径（不一定存在）
+	char dir[MAXSTRPATH] = { '\0' };		// 文件路径
+	char file[MAXSTRPATH];					// 通用nav文件路径（根据sys变化）
+	char* p;								// 字符串指针
+	char c = 'n';							// nav文件拓展符
+	/* ================================================================================== */
 
 	strcpy(tmp, obspath);
 
-	if (sys == SYS_GPS)      c = tmp[strlen(obspath) - 1] = 'n';
+	// 根据sys修改nav文件路径
+	if      (sys == SYS_GPS) c = tmp[strlen(obspath) - 1] = 'n';
 	else if (sys == SYS_GLO) c = tmp[strlen(obspath) - 1] = 'g';
 	else if (sys == SYS_CMP) c = tmp[strlen(obspath) - 1] = 'c';
 	else if (sys == SYS_GAL) c = tmp[strlen(obspath) - 1] = 'e';
 
+	// 1.若tmp所指文件存在，则保存tmp到navpath[]中，并返回1
 	if (access(tmp, 0) != -1) {
 		strcpy(navpaths[index], tmp);
 		return 1;
 	}
 
+	// 2.若tmp所指文件不存在，则查找公共nav文件
 	if ((p = strrchr(obspath, FILEPATHSEP))) xStrMid(dir, 0, p - obspath + 1, obspath);
 
 	secs = time2gpst(ts, &weeks); days = (int)(secs / 86400.0);
@@ -306,6 +323,7 @@ extern int findNavFile(const gtime_t ts, const gtime_t te, char obspath[],
 
 		num2str(doy, tmp, 3);
 
+		// 根据导航系统sys写nav文件名到file，并检索file是否存在，存在则保存至navpath[]
 		if (sys == SYS_GPS || sys == SYS_GAL) {
 			sprintf(file, "%sbrdc%s0.%02d%c", dir, tmp, year, c);
 			if (access(file, 0) != -1)
@@ -401,14 +419,20 @@ extern int findNavFile_p(const gtime_t ts, const gtime_t te, char obspath[],
 }
 
 //find precise clock files
-extern int findClkFile(const gtime_t ts, const gtime_t te, char dir[],
-	char* clkpaths[], const int index)
+extern int findClkFile(const gtime_t ts, const gtime_t te, char dir[], char* clkpaths[], const int index)
 {
-	int weeks, weeke, days, daye, n, i, j, w, d, index_ = 0;
-	double secs, sece;
-	char tmp[200];
-	char sep = (char)FILEPATHSEP;
+	/* 局部变量定义 ===================================================================== */
+	double secs, sece;							// 开始秒/结束秒
+	int weeks, weeke, days, daye;				// 开始周/结束周/开始周内日/结束周内日
+	int n;										// 当前obs所跨天数
+	int i, j;									// 循环遍历变量
+	int w, d;									// 周/周内日
+	int index_ = 0;								// Clk文件计数
+	char tmp[200];								// Clk文件路径
+	char sep = (char)FILEPATHSEP;				// 分隔符"\\"
 	char ac[][4] = { "igs","esa","cod","gfz","grg","jpl","gbm","com","grm","wum" };
+												// Clk产品站名
+	/* ================================================================================== */
 
 	//secs=time2gpst(timeadd(ts,-301),&weeks); days=(int)(secs/86400.0);
 	//sece=time2gpst(timeadd(te,+301),&weeke); daye=(int)(sece/86400.0);
@@ -446,15 +470,22 @@ extern int findClkFile(const gtime_t ts, const gtime_t te, char dir[],
 }
 
 //find SP3 files
-extern int findSp3File(const gtime_t ts, const gtime_t te, char dir[],
-	char* sp3paths[], const int index)
+extern int findSp3File(const gtime_t ts, const gtime_t te, char dir[], char* sp3paths[], const int index)
 {
-	int weeks, weeke, days, daye, n, i, j, k, w, d, index_ = 0;
-	double secs, sece;
-	char tmp[200], suffix[2][10] = { "eph","sp3" };
-	char sep = (char)FILEPATHSEP;
+	/* 局部变量定义 ===================================================================== */
+	gtime_t t;									// GPS时间变量
+	double secs, sece;							// 开始秒/结束秒
+	int weeks, weeke, days, daye;				// 开始周/结束周/开始周内日/结束周内日
+	int n;										// 当前obs所跨天数
+	int i, j, k;								// 循环遍历变量
+	int w, d;									// 周/周内日
+	int index_ = 0;								// Sp3文件计数
+	char sep = (char)FILEPATHSEP;				// 分隔符"\\"
+	char tmp[200];								// Sp3文件路径
+	char suffix[2][10] = { "eph","sp3" };		// 精密星历后缀索引
 	char ac[][4] = { "igs","esa","cod","gfz","grg","jpl","gbm","com","grm","wum" };
-	gtime_t t;
+												// Sp3产品站名
+	/* ================================================================================== */
 
 	t = timeadd(ts, -900 * 10);
 	secs = time2gpst(t, &weeks);
