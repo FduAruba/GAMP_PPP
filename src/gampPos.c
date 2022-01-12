@@ -13,7 +13,7 @@ static pcvs_t pcvss = { 0 };        /* receiver antenna parameters */
 static pcvs_t pcvsr = { 0 };        /* satellite antenna parameters */
 static obs_t obss = { 0 };          /* observation data */
 static nav_t navs = { 0 };          /* navigation data */
-static sta_t stas[MAXRCV];      /* station infomation */
+static sta_t stas[MAXRCV];			/* station infomation */
 
 /* search next observation data index ----------------------------------------*/
 static int nextobsf(const obs_t* obs, int* i, int rcv)
@@ -900,15 +900,20 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 *
 *          ssr corrections are valid only for forward estimation.
 *-----------------------------------------------------------------------------*/
-extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
-	const solopt_t* sopt, filopt_t* fopt)
+extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 {
-	int i, j, stat = 0, index[MAXINFILE] = { 0 };
+	/* 局部变量定义 ===================================================================== */
+	int i, j;									// 循环遍历变量
+	int stat = 0;								// 状态标识符
+	int index[MAXINFILE] = { 0 };				// 文件索引
+	/* ================================================================================== */
 
-	/* write header to output file */
-	if (!outhead(fopt->outf, popt, sopt, PPP_Glo.outFp, MAXOUTFILE))
+	/* 1.write header to output file 输出文件头(空实现) */
+	if (!outhead(fopt->outf, popt, sopt, PPP_Glo.outFp, MAXOUTFILE)) {
 		return 0;
+	}
 
+	/* 2.打开各个输出文件指针 */
 	for (i = 0; i < MAXOUTFILE; i++) {
 		if (fopt->outf[i] && strlen(fopt->outf[i]) > 2)
 			PPP_Glo.outFp[i] = openfile(fopt->outf[i]);
@@ -916,17 +921,18 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 			PPP_Glo.outFp[i] = NULL;
 	}
 
-	/* set rinex code priority for precise clock */
-	if (PMODE_PPP_KINEMA <= popt->mode)
+	/* 3.set rinex code priority for precise clock 设置优先码 */
+	if (PMODE_PPP_KINEMA <= popt->mode) {
 		setcodepri(SYS_GPS, 1, popt->sateph == EPHOPT_PREC ? "PYWC" : "CPYW");
-
-	/* read satellite antenna parameters */
+	}
+		
+	/* 4.read satellite antenna parameters 读Atx文件 */
 	if (*fopt->antf && !(readpcv(fopt->antf, &pcvss))) {
 		printf("*** ERROR: no sat ant pcv in %s\n", fopt->antf);
 		return -1;
 	}
 
-	/* read dcb parameters */
+	/* 5.read dcb parameters 读DCB文件 */
 	for (i = 0; i < MAXSAT; i++) for (j = 0; j < 3; j++) {
 		navs.cbias[i][j] = 0.0;
 	}
@@ -939,21 +945,21 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 	if (*fopt->mgexdcbf && (popt->navsys & SYS_CMP || popt->navsys & SYS_GAL))
 		readdcb_mgex(fopt->mgexdcbf, &navs, PPP_Glo.prcOpt_Ex.ts);
 
-	/* read erp data */
+	/* 6.read erp data 读erp文件 */
 	if (*fopt->eopf) {
 		if (!readerp(fopt->eopf, &navs.erp)) {
 			printf("ERROR: no erp data %s\n", fopt->eopf);
 		}
 	}
 
-	/* read ionosphere data file */
+	/* 7.read ionosphere data file 读Ion文件 */
 	if (*fopt->ionf && (popt->ionoopt == IONOOPT_TEC || ((popt->ionoopt == IONOOPT_UC1 || popt->ionoopt == IONOOPT_UC12) &&
 		PPP_Glo.prcOpt_Ex.ion_const)))
 		readtec(fopt->ionf, &navs, 1);
 
 	for (i = 0; i < MAXINFILE; i++) index[i] = i;
 
-	/* read prec ephemeris */
+	/* 8.read prec ephemeris 读精密星历 */
 	readpreceph(fopt->inf, MAXINFILE, popt, &navs);
 
 	/* read obs and nav data */

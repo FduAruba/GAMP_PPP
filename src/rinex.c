@@ -1244,7 +1244,7 @@ static int readrnxfile(const char* file, gtime_t ts, gtime_t te, double tint,
 		return ' ';
 	}
 
-	if (strstr(file, "cod") || strstr(file, "COD")) index = 10;
+	if      (strstr(file, "cod") || strstr(file, "COD")) index = 10;
 	else if (strstr(file, "igs") || strstr(file, "IGS")) index = 9;
 	else if (strstr(file, "igr") || strstr(file, "IGR")) index = 8;
 	else if (strstr(file, "gfz") || strstr(file, "GFZ")) index = 7;

@@ -556,10 +556,13 @@ extern int findIonFile(const gtime_t ts, const gtime_t te, char dir[], char file
 //find EOP file
 extern int findErpFile(const gtime_t ts, const gtime_t te, char dir[], char filepath[])
 {
-	int j, weeks, weeke;
-	char tmp[200];
-	char sep = (char)FILEPATHSEP;
+	/* 局部变量定义 =============================================================== */
+	int j;								// 循环遍历变量
+	int weeks, weeke;					// 开始周/结束周
+	char tmp[200];						// Erp路径
+	char sep = (char)FILEPATHSEP;		// 分隔符"\\"
 	char ac[][4] = { "igs","esa","cod","gfz","grg","jpl","gbm","com","wum" };
+	/* ============================================================================ */
 
 	time2gpst(ts, &weeks);
 	time2gpst(te, &weeke);
@@ -586,13 +589,15 @@ extern int findErpFile(const gtime_t ts, const gtime_t te, char dir[], char file
 //find P1-P2 DCB file
 extern int findP1P2DcbFile(const gtime_t ts, const gtime_t te, char dir[], char dcbpath[])
 {
-	int bRes = 0;
-	char tmp[MAXSTRPATH];
-	char sep = (char)FILEPATHSEP;
-	double dcts[6], dcte[6];
-	int i;
-	gtime_t t0, t1, gt;
-	double ct0[6], ct1[6];
+	/* 局部变量定义 ===================================================================== */
+	gtime_t t0, t1, gt;							// GPS时间变量
+	int bRes = 0;								// 判定符
+	int i;										// 循环遍历变量
+	char tmp[MAXSTRPATH];						// DCB文件路径
+	char sep = (char)FILEPATHSEP;				// 分隔符"\\"
+	double dcts[6], dcte[6];					// 开始时间/结束时间(YYYY MM DD hh mm ss)
+	double ct0[6], ct1[6];						// 临时开始时间/结束时间(YYYY MM DD hh mm ss)
+	/* ================================================================================== */
 
 	time2epoch(timeadd(ts, 100), dcts);
 	time2epoch(timeadd(te, -100), dcte);

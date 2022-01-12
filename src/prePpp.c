@@ -437,30 +437,41 @@ static void getFopt_auto(char obsfile[], char dir[], gtime_t ts, gtime_t te, con
 	/* 5.查找Sp3文件【精密星历】--------------------------------------------------------- */
 	ni += findSp3File(ts, te, dir, fopt->inf, ni);
 
-	/* 6.查找Sp3文件【精密星历】--------------------------------------------------------- */
+	/* 6.查找DCB文件【差分码偏差】--------------------------------------------------------- */
 	findP1P2DcbFile(ts, te, dir, fopt->p1p2dcbf);
 	findP1C1DcbFile(ts, te, dir, fopt->p1c1dcbf);
 	findP2C2DcbFile(ts, te, dir, fopt->p2c2dcbf);
-	if (popt.navsys & SYS_CMP || popt.navsys & SYS_GAL) findMGEXDcbFile(ts, te, dir, fopt->mgexdcbf);
+	if (popt.navsys & SYS_CMP || popt.navsys & SYS_GAL) { // 北斗&伽利略系统读DCB
+		findMGEXDcbFile(ts, te, dir, fopt->mgexdcbf);
+	}
 
-	if (popt.tidecorr & 4) findErpFile(ts, te, dir, fopt->eopf);
+	/* 7.查找Erp文件【极潮文件】--------------------------------------------------------- */
+	if (popt.tidecorr & 4) {
+		findErpFile(ts, te, dir, fopt->eopf);
+	}
 
-	if (popt.ionoopt == IONOOPT_TEC || ((popt.ionoopt == IONOOPT_UC1 || popt.ionoopt == IONOOPT_UC12) &&
-		PPP_Glo.prcOpt_Ex.ion_const))
+	/* 8.查找Ion文件【电离层文件】--------------------------------------------------------- */
+	if (popt.ionoopt == IONOOPT_TEC || ((popt.ionoopt == IONOOPT_UC1 || popt.ionoopt == IONOOPT_UC12) && PPP_Glo.prcOpt_Ex.ion_const)) {
 		findIonFile(ts, te, dir, fopt->ionf);
+	}
 
-	if (popt.tidecorr & 2) findBlqFile(ts, te, dir, fopt->blqf);
+	/* 9.查找Blq文件【海洋潮文件】--------------------------------------------------------- */
+	if (popt.tidecorr & 2) {
+		findBlqFile(ts, te, dir, fopt->blqf);
+	}
 
+	/* 10.查找Atx文件【天线文件】--------------------------------------------------------- */
 	findAtxFile(ts, te, dir, fopt->antf);
 
-	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0) { // 获取站的真值坐标
+	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0) {
 		sprintf(tmp, "%s%csite.crd", PPP_Glo.obsDir, sep);
 		if (access(tmp, 0) != -1) getCoord_i(tmp, PPP_Glo.sitName, PPP_Glo.crdTrue);
 	}
-	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0)
+	if (PPP_Glo.crdTrue[0] * PPP_Glo.crdTrue[1] * PPP_Glo.crdTrue[2] == 0.0) {
 		PPP_Glo.crdTrue[0] = PPP_Glo.crdTrue[1] = PPP_Glo.crdTrue[2] = 0.0;
+	}
 
-	//for output files
+	// 11.for output files 写输出文件名
 	sprintf(tmp, "%s%c%s%c%s", PPP_Glo.obsDir, sep, PPP_Glo.outFolder, sep, PPP_Glo.ofileName_ful);
 	for (i = 0; i < MAXOUTFILE; i++) {
 		if (strlen(outtype[i]) > 0 && sopt.fpout[i])
@@ -578,7 +589,7 @@ extern void procOneFile(char file[], char cfgfile[], int iT, int iN)
 	// 3.automatically matches the corresponding files
 	getFopt_auto(file, PPP_Glo.obsDir, ts, te, pparam.prcopt, pparam.solopt, &pparam.filopt);
 
-	// post processing positioning 后处理入口！！！
+	// 4.post processing positioning 执行后处理
 	gampPos(PPP_Glo.prcOpt_Ex.ts, PPP_Glo.prcOpt_Ex.te, 0.0, 0.0, &pparam.prcopt, &pparam.solopt, &pparam.filopt);
 
 	postProc(pparam);

@@ -2015,19 +2015,25 @@ static void addpcv(const pcv_t* pcv, pcvs_t* pcvs)
 /* read antex file ----------------------------------------------------------*/
 static int readantex(const char* file, pcvs_t* pcvs)
 {
-	FILE* fp;
-	static const pcv_t pcv0 = { 0 };
-	pcv_t pcv;
-	double neu[3], dd;
-	int i, f, prn, freq = 0, j, id;
-	char buff[256], csys;
+	/* 局部变量定义 ======================================================== */
+	FILE* fp;								// Atx文件指针
+	static const pcv_t pcv0 = { 0 };		// pcv结构体(不变为0)
+	pcv_t pcv;								// pcv结构体(改变)
+	double neu[3];							// [E、N、U]或[X、Y、Z]方向偏移量
+	double dd;								// 与方位角无关的数据个数
+	int i, j, id;							// 循环遍历变量
+	int f, freq = 0;						// 频率
+	int prn;								// 卫星PRN
+	char buff[256], csys;					// Atx字符串/卫星系统首字母(G,R,E,C)
+	/* ===================================================================== */
 
 	if (!(fp = fopen(file, "r"))) {
 		return 0;
 	}
 	while (fgets(buff, sizeof(buff), fp)) {
-		if (strlen(buff) < 60 || strstr(buff + 60, "COMMENT")) continue;
-
+		if (strlen(buff) < 60 || strstr(buff + 60, "COMMENT")) {
+			continue;
+		}
 		if (strstr(buff + 60, "START OF ANTENNA")) {
 			pcv = pcv0;
 		}
@@ -2035,7 +2041,7 @@ static int readantex(const char* file, pcvs_t* pcvs)
 			addpcv(&pcv, pcvs);
 			continue;
 		}
-
+		// 卫星天线类型/卫星SVN
 		if (strstr(buff + 60, "TYPE / SERIAL NO")) {
 			strncpy(pcv.type, buff, 20); pcv.type[20] = '\0';
 			strncpy(pcv.code, buff + 20, 20); pcv.code[20] = '\0';
@@ -2044,26 +2050,30 @@ static int readantex(const char* file, pcvs_t* pcvs)
 				pcv.sat = satid2no(pcv.code);
 			}
 		}
+		// 此记录的有效时间：开始ts/结束te
 		else if (strstr(buff + 60, "VALID FROM")) {
 			if (!str2time(buff, 0, 43, &pcv.ts)) continue;
 		}
 		else if (strstr(buff + 60, "VALID UNTIL")) {
 			if (!str2time(buff, 0, 43, &pcv.te)) continue;
 		}
+		// 方位角步长，0.0表示与方位角无关
 		else if (strstr(buff + 60, "DAZI")) {
 			pcv.dazi = str2num(buff, 2, 6); continue;
 		}
+		// 天顶角的起始、结束、步长
 		else if (strstr(buff + 60, "ZEN1 / ZEN2 / DZEN")) {
 			pcv.zen1 = str2num(buff, 2, 6);
 			pcv.zen2 = str2num(buff, 8, 6);
 			pcv.dzen = str2num(buff, 14, 6);
 			continue;
 		}
+		// 一个频率的开始
 		else if (strstr(buff + 60, "START OF FREQUENCY")) {
-			if (sscanf(buff + 4, "%d", &f) < 1) continue;
-			//for (i=0;i<NFREQ;i++) if (freqs[i]==f) break;
-			//if (i<NFREQ) freq=i+1;
-			if (sscanf(buff + 3, "%c", &csys) < 1) continue;
+			if (sscanf(buff + 4, "%d", &f) < 1) continue;		// 读频率
+			if (sscanf(buff + 3, "%c", &csys) < 1) continue;	// 读系统
+			
+			// 根据系统csys设置频率freq(G/R/C/E/J)
 			if (csys == 'G')
 				freq = f;
 			else if (csys == 'R')
@@ -2083,24 +2093,24 @@ static int readantex(const char* file, pcvs_t* pcvs)
 			}
 			else freq = 0;
 		}
+		// 一个频率的结束
 		else if (strstr(buff + 60, "END OF FREQUENCY")) {
 			freq = 0;
 		}
+		/* 相位中心变化(PCO) ------------------------------------------------------ 
+		 * 卫星                     | 平均天线相位中心到卫星质心的XYZ变化量(mm)
+		 * 接收机                   | 平均天线相位中心到天线参考点ARP的ENU变化量(mm)
+		 ----------------------------------------------------------------------- */
 		else if (strstr(buff + 60, "NORTH / EAST / UP")) {
-			//if (freq<1||NFREQ<freq) continue;
 			if (decodef(buff, 3, neu) < 3) continue;
 			if (freq < 1) continue;
-			pcv.off[freq - 1][0] = neu[pcv.sat ? 0 : 1]; /* x or e */
-			pcv.off[freq - 1][1] = neu[pcv.sat ? 1 : 0]; /* y or n */
-			pcv.off[freq - 1][2] = neu[2];           /* z or u */
+			pcv.off[freq - 1][0] = neu[pcv.sat ? 0 : 1];	/* x or e */
+			pcv.off[freq - 1][1] = neu[pcv.sat ? 1 : 0];	/* y or n */
+			pcv.off[freq - 1][2] = neu[2];					/* z or u */
 		}
-		//接收机PCV考虑随方位角的变化
+		// 接收机PCV考虑随方位角的变化
 		else if (strstr(buff, "NOAZI")) {
-			//if (SYS_CMP==PPP_Glo.sFlag[pcv.sat-1].sys) continue;
-
-			//if (freq<1||NFREQ<freq) continue;
 			if (freq < 1) continue;
-
 			dd = (pcv.zen2 - pcv.zen1) / pcv.dzen + 1;
 
 			if (dd != myRound(dd) || dd <= 1) {
@@ -2108,8 +2118,8 @@ static int readantex(const char* file, pcvs_t* pcvs)
 				continue;
 			}
 
+			// 相位中心变化(PCV)
 			if (pcv.dazi == 0.0) {
-				//pcv.var[freq-1]=new double[int(dd)];
 				i = decodef(buff + 8, (int)dd, pcv.var[freq - 1]);
 				if (i <= 0) {
 					printf("*** ERROR: error in reading atx (i<=0)!\n");
@@ -2122,7 +2132,6 @@ static int readantex(const char* file, pcvs_t* pcvs)
 			}
 			else {
 				id = (int)((360 - 0) / pcv.dazi) + 1;
-				//pcv.var[freq-1]=new double[int(dd)*id];
 
 				for (i = 0; i < id; i++) {
 					fgets(buff, sizeof(buff), fp);
@@ -2327,21 +2336,22 @@ extern int readerp(const char* file, erp_t* erp)
 		}
 		if (erp->n >= erp->nmax) {
 			erp->nmax = erp->nmax <= 0 ? 128 : erp->nmax * 2;
-			erp_data = (erpd_t*)realloc(erp->data, sizeof(erpd_t) * erp->nmax);
-			if (!erp_data) {
+			//erp_data = (erpd_t*)realloc(erp->data, sizeof(erpd_t) * erp->nmax);
+			if (!(erp_data = (erpd_t*)realloc(erp->data, sizeof(erpd_t) * erp->nmax))) {
 				free(erp->data); erp->data = NULL; erp->n = erp->nmax = 0;
 				fclose(fp);
 				return 0;
 			}
 			erp->data = erp_data;
 		}
-		erp->data[erp->n].mjd = v[0];
-		erp->data[erp->n].xp = v[1] * 1E-6 * AS2R;
-		erp->data[erp->n].yp = v[2] * 1E-6 * AS2R;
-		erp->data[erp->n].ut1_utc = v[3] * 1E-7;
-		erp->data[erp->n].lod = v[4] * 1E-7;
-		erp->data[erp->n].xpr = v[12] * 1E-6 * AS2R;
-		erp->data[erp->n++].ypr = v[13] * 1E-6 * AS2R;
+		erp->data[erp->n].mjd     = v[0];
+		erp->data[erp->n].xp      = v[1]  * 1E-6 * AS2R;
+		erp->data[erp->n].yp      = v[2]  * 1E-6 * AS2R;
+		erp->data[erp->n].ut1_utc = v[3]  * 1E-7;
+		erp->data[erp->n].lod     = v[4]  * 1E-7;
+		erp->data[erp->n].xpr     = v[12] * 1E-6 * AS2R;
+		erp->data[erp->n].ypr	  = v[13] * 1E-6 * AS2R;
+		erp->n++;
 	}
 	fclose(fp);
 	return 1;

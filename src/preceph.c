@@ -354,7 +354,7 @@ static int readdcbf(const char* file, nav_t* nav)
 		return 0;
 	}
 	while (fgets(buff, sizeof(buff), fp)) {
-		if (strstr(buff, "DIFFERENTIAL (P1-P2) CODE BIASES")) type = 1;
+		if      (strstr(buff, "DIFFERENTIAL (P1-P2) CODE BIASES")) type = 1;
 		else if (strstr(buff, "DIFFERENTIAL (P1-C1) CODE BIASES")) type = 2;
 		else if (strstr(buff, "DIFFERENTIAL (P2-C2) CODE BIASES")) type = 3;
 
@@ -377,12 +377,13 @@ static int readdcbf(const char* file, nav_t* nav)
 *-----------------------------------------------------------------------------*/
 extern int readdcb(const char* file, nav_t* nav)
 {
-	int i, n;
-	char* efiles[MAXEXFILE] = { 0 };
+	/* 局部变量定义 ========================================================= */
+	int i;								// 循环遍历变量
+	int n;								// 拓展文件数
+	char* efiles[MAXEXFILE] = { 0 };	// 拓展文件路径
+	/* ====================================================================== */
 
-	//for (i=0;i<MAXSAT;i++) for (j=0;j<3;j++) {
-	//    nav->cbias[i][j]=0.0;
-	//}
+	// 开辟dcb文件路径内存在堆区
 	for (i = 0; i < MAXEXFILE; i++) {
 		if (!(efiles[i] = (char*)malloc(1024))) {
 			for (i--; i >= 0; i--) free(efiles[i]);
@@ -392,11 +393,12 @@ extern int readdcb(const char* file, nav_t* nav)
 	n = expath(file, efiles, MAXEXFILE);
 
 	for (i = 0; i < n; i++) {
-		if (strlen(efiles[i]) < 2)
+		if (strlen(efiles[i]) < 2) {
 			continue;
-
+		}
 		readdcbf(efiles[i], nav);
 	}
+	// 释放efiles内存
 	for (i = 0; i < MAXEXFILE; i++) free(efiles[i]);
 
 	return 1;
