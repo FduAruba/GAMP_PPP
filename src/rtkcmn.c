@@ -456,9 +456,14 @@ extern unsigned char obs2code(const char* obs, int* freq)
 	int i;
 	if (freq) *freq = 0;
 	for (i = 1; *obscodes[i]; i++) {
-		if (strcmp(obscodes[i], obs)) continue;
-		if (freq) *freq = obsfreqs[i];
-		return (unsigned char)i;
+		if (strcmp(obscodes[i], obs)) {
+			continue;
+		} 
+		if (freq) {
+			*freq = obsfreqs[i];
+		}
+		return (unsigned char)i; // 返回i表示在obscode[]列表中的位置
+								 // 返回值类型为uchar(8bit)目的为节省内存,uint(32bit)占内存大
 	}
 	return CODE_NONE;
 }
@@ -506,9 +511,12 @@ extern void setcodepri(int sys, int freq, const char* pri)
 *-----------------------------------------------------------------------------*/
 extern int getcodepri(int sys, unsigned char code, const char* opt)
 {
-	const char* p, * optstr;
-	char* obs, str[8] = "";
-	int i, j;
+	/* 局部变量定义 ========================================================= */
+	const char* p;					// 字符串位置指针
+	const char* optstr;				// 系统选项字符串
+	char* obs, str[8] = "";			// obs类型/字符串变量
+	int i, j;						// 循环遍历变量
+	/* ====================================================================== */
 
 	switch (sys) {
 	case SYS_GPS: i = 0; optstr = "-GL%2s"; break;
@@ -522,7 +530,7 @@ extern int getcodepri(int sys, unsigned char code, const char* opt)
 	}
 	obs = code2obs(code, &j);
 
-	/* parse code options */
+	/* parse code options [一般没用]*/
 	for (p = opt; p && (p = strchr(p, '-')); p++) {
 		if (sscanf(p, optstr, str) < 1 || str[0] != obs[0]) continue;
 		return str[1] == obs[1] ? 15 : 0;

@@ -95,22 +95,20 @@ static void freepreceph(nav_t* nav)
 	free(nav->tec); nav->tec = NULL; nav->nt = nav->ntmax = 0;
 }
 /* read obs and nav data -----------------------------------------------------*/
-static int readobsnav(gtime_t ts, gtime_t te, double ti, char* infile[MAXINFILE],
-	const int* index, int n, const prcopt_t* prcopt,
-	obs_t* obs, nav_t* nav, sta_t* sta)
+static int readobsnav(gtime_t ts, gtime_t te, double ti, char* infile[MAXINFILE], const int* index, int n, const prcopt_t* prcopt, obs_t* obs, nav_t* nav, sta_t* sta)
 {
-	int i, j, ind = 0, nobs = 0, rcv = 1, nep;
+	/* 局部变量定义 ===================================================================== */
+	int i, j;							// 循环遍历变量
+	int rcv = 1;						// 接收机号
+	int nep;							// eph计数
+	/* ================================================================================== */
 
-	obs->data = NULL; obs->n = obs->nmax = 0;
-	nav->eph = NULL; nav->n = nav->nmax = 0;
+	obs->data = NULL; obs->n  = obs->nmax  = 0;
+	nav->eph  = NULL; nav->n  = nav->nmax  = 0;
 	nav->geph = NULL; nav->ng = nav->ngmax = 0;
 	PPP_Glo.nEpoch = 0;
 
 	for (i = 0; i < n; i++) {
-		if (index[i] != ind) {
-			if (obs->n > nobs) rcv++;
-			ind = index[i]; nobs = obs->n;
-		}
 		/* read rinex obs and nav file */
 		nep = readrnxt(infile[i], rcv, ts, te, ti, prcopt->rnxopt, obs, nav, rcv <= 2 ? sta + rcv - 1 : NULL);
 	}
@@ -959,10 +957,10 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 
 	for (i = 0; i < MAXINFILE; i++) index[i] = i;
 
-	/* 8.read prec ephemeris 读精密星历 */
+	/* 8.read prec ephemeris 读Sp3精密星历 */
 	readpreceph(fopt->inf, MAXINFILE, popt, &navs);
 
-	/* read obs and nav data */
+	/* 9.read obs and nav data 读obs\nav文件 */
 	if (!readobsnav(ts, te, ti, fopt->inf, index, MAXINFILE, popt, &obss, &navs, stas)) {
 		freeobsnav(&obss, &navs);
 		return 0;

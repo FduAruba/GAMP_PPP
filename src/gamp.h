@@ -908,7 +908,7 @@ typedef struct {        /* navigation data type */
     pcv_t pcvs[MAXSAT];          /* satellite antenna pcv */
 } nav_t;
 
-typedef struct {        /* station parameter type */
+typedef struct {          /* station parameter type */
     char name   [MAXANT]; /* marker name */
     char marker [MAXANT]; /* marker number */
     char antdes [MAXANT]; /* antenna descriptor */
@@ -916,12 +916,12 @@ typedef struct {        /* station parameter type */
     char rectype[MAXANT]; /* receiver type descriptor */
     char recver [MAXANT]; /* receiver firmware version */
     char recsno [MAXANT]; /* receiver serial number */
-    int antsetup;       /* antenna setup id */
-    int itrf;           /* ITRF realization year */
-    int deltype;        /* antenna delta type (0:enu,1:xyz) */
-    double pos[3];      /* station position (ecef) (m) */
-    double del[3];      /* antenna position delta (e/n/u or x/y/z) (m) */
-    double hgt;         /* antenna height (m) */
+    int antsetup;         /* antenna setup id */
+    int itrf;             /* ITRF realization year */
+    int deltype;          /* antenna delta type (0:enu,1:xyz) */
+    double pos[3];        /* station position (ecef) (m) */
+    double del[3];        /* antenna position delta (e/n/u or x/y/z) (m) */
+    double hgt;           /* antenna height (m) */
 } sta_t;
 
 typedef struct {        /* solution type */
