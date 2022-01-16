@@ -555,15 +555,15 @@ typedef struct {        /* time struct */
 } gtime_t;
 
 typedef struct {        /* observation data record */
-    gtime_t time;       /* receiver sampling time (GPST) */
-    unsigned char sat,rcv; /* satellite/receiver number */
+    gtime_t time;                     /* receiver sampling time (GPST) */
+    unsigned char sat,rcv;            /* satellite/receiver number */
     unsigned char SNR [NFREQ+NEXOBS]; /* signal strength (0.25 dBHz) */
     unsigned char LLI [NFREQ+NEXOBS]; /* loss of lock indicator */
     unsigned char code[NFREQ+NEXOBS]; /* code indicator (CODE_???) */
-	char *type[NFREQ];
-    double L[NFREQ+NEXOBS]; /* observation data carrier-phase (cycle) */
-    double P[NFREQ+NEXOBS]; /* observation data pseudorange (m) */
-    float  D[NFREQ+NEXOBS]; /* observation data doppler frequency (Hz) */
+	char *type[NFREQ];                /* type of obs data (CLC,C1P...) */
+    double L[NFREQ+NEXOBS];           /* observation data carrier-phase (cycle) */
+    double P[NFREQ+NEXOBS];           /* observation data pseudorange (m) */
+    float  D[NFREQ+NEXOBS];           /* observation data doppler frequency (Hz) */
 } obsd_t;
 
 typedef struct {        /* observation data */

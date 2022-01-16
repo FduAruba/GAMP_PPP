@@ -350,7 +350,7 @@ extern int satid2no(const char* id)
 	char code;
 
 	if (sscanf(id, "%d", &prn) == 1) {
-		if (MINPRNGPS <= prn && prn <= MAXPRNGPS) sys = SYS_GPS;
+		if		(MINPRNGPS <= prn && prn <= MAXPRNGPS) sys = SYS_GPS;
 		else if (MINPRNSBS <= prn && prn <= MAXPRNSBS) sys = SYS_SBS;
 		else if (MINPRNQZS <= prn && prn <= MAXPRNQZS) sys = SYS_QZS;
 		else return 0;
@@ -469,8 +469,8 @@ extern unsigned char obs2code(const char* obs, int* freq)
 }
 /* obs code to obs code string -------------------------------------------------
 * convert obs code to obs code string
-* args   : unsigned char code I obs code (CODE_???)
-*          int    *freq  IO     frequency (NULL: no output)
+* args   : unsigned char code I   obs code (CODE_???)
+*          int    *freq		  IO  frequency (NULL: no output)
 *                               (1:L1/E1, 2:L2/B1, 3:L5/E5a/L3, 4:L6/LEX/B3,
 								 5:E5b/B2, 6:E5(a+b), 7:S)
 * return : obs code string ("1C","1P","1P",...)

@@ -503,8 +503,7 @@ static int readrnxh(FILE* fp, double* ver, char* type, int* sys, int* tsys, char
 	return 0;
 }
 /* decode obs epoch ----------------------------------------------------------*/
-static int decode_obsepoch(FILE* fp, char* buff, double ver, gtime_t* time,
-	int* flag, int* sats)
+static int decode_obsepoch(FILE* fp, char* buff, double ver, gtime_t* time, int* flag, int* sats)
 {
 	int i, j, n;
 	char satid[8] = "";
@@ -548,22 +547,26 @@ static int decode_obsepoch(FILE* fp, char* buff, double ver, gtime_t* time,
 	return n;
 }
 /* decode obs data -----------------------------------------------------------*/
-static int decode_obsdata(FILE* fp, char* buff, double ver, int mask,
-	sigind_t* index, obsd_t* obs)
+static int decode_obsdata(FILE* fp, char* buff, double ver, int mask, sigind_t* index, obsd_t* obs)
 {
-	sigind_t* ind;
-	double val[MAXOBSTYPE] = { 0 };
-	unsigned char lli[MAXOBSTYPE] = { 0 };
-	char satid[8] = "";
-	int i, j, n, m, stat = 1, p[MAXOBSTYPE], k[16], l[16];
+	/* 局部变量定义 ========================================================= */
+	sigind_t* ind;							// 信号索引
+	double val[MAXOBSTYPE] = { 0 };			// 每行的值(伪距/相位)
+	unsigned char lli[MAXOBSTYPE] = { 0 };	// 失锁指示符
+	char satid[8] = "";						// 卫星ID
+	int i, j, n, m;							// 循环遍历变量
+	int k[16], l[16];						// L1/L2伪距信号索引(ver.2)
+	int stat = 1, p[MAXOBSTYPE];			// 状态指示符/位置指示(freq)
+	/* ====================================================================== */
 
-	if (ver > 2.99) { /* ver.3 */
-		strncpy(satid, buff, 3);
-		//strncpy(obs->csat,buff,3);
+	/* ver.3 */
+	if (ver > 2.99) {
+		strncpy(satid, buff, 3);	// 获取每行开始的卫星ID
 		obs->sat = (unsigned char)satid2no(satid);
 	}
+	// 如果卫星号sat = 0或系统sys不符合，状态符stat置0
 	if (!obs->sat) {
-		//printf("decode_obsdata: unsupported sat sat=%s\n",satid);
+		printf("decode_obsdata: unsupported sat sat=%s\n", satid);
 		stat = 0;
 	}
 	else if (!(satsys(obs->sat, NULL) & mask)) {
@@ -643,15 +646,28 @@ static int decode_obsdata(FILE* fp, char* buff, double ver, int mask,
 	for (i = 0; i < ind->n; i++) {
 		if (p[i] < 0 || val[i] == 0.0) continue;
 		switch (ind->type[i]) {
-		case 0: obs->P[p[i]] = val[i]; obs->code[p[i]] = ind->code[i];
-			obs->type[j++] = code2obs(obs->code[p[i]], &p[i]); break;
-		case 1: obs->L[p[i]] = val[i]; obs->LLI[p[i]] = lli[i];      break;
-		case 2: obs->D[p[i]] = (float)val[i];                        break;
-		case 3: obs->SNR[p[i]] = (unsigned char)(val[i] * 4.0 + 0.5);    break;
+		case 0: {
+			obs->P[p[i]]    = val[i];
+			obs->code[p[i]] = ind->code[i];
+			obs->type[j++]  = code2obs(obs->code[p[i]], &p[i]);
+			break;
+		}
+		case 1: {
+			obs->L[p[i]]    = val[i];
+			obs->LLI[p[i]]  = lli[i];
+			break;
+		}
+		case 2: {
+			obs->D[p[i]]    = (float)val[i];
+			break;
+		}
+		case 3: {
+			obs->SNR[p[i]]  = (unsigned char)(val[i] * 4.0 + 0.5);
+			break;
+		}
+		 return 1;
 		}
 	}
-
-	return 1;
 }
 /* save slips ----------------------------------------------------------------*/
 static void saveslips(unsigned char slips[][NFREQ], obsd_t* data)
@@ -703,7 +719,7 @@ static int set_sysmask(const char* opt)
 {
 	/* 局部变量定义 ========================================================= */
 	const char* p;						// 系统首字母
-	int mask = SYS_NONE;				// 系统筛选
+	int mask = SYS_NONE;				// 系统筛选(默认无)
 	/* ====================================================================== */
 
 	if (!(p = strstr(opt, "-SYS="))) return SYS_ALL;
