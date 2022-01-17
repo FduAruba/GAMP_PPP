@@ -1131,19 +1131,33 @@ extern double str2num(const char* s, int i, int n)
 * args   : char   *s        I   string ("... yyyy mm dd hh mm ss ...")
 *          int    i,n       I   substring position and width
 *          gtime_t *t       O   gtime_t struct
-* return : status (0:ok,0>:error)
+* return : status (0:ok,-1:error)
 *-----------------------------------------------------------------------------*/
 extern int str2time(const char* s, int i, int n, gtime_t* t)
 {
-	double ep[6];
-	char str[256], * p = str;
+	/* 局部变量定义 ========================================================= */
+	double ep[6];						// 历元时刻
+	char str[256], * p = str;			// 字符串变量/字符串指针
+	/* ====================================================================== */
 
-	if (i < 0 || (int)strlen(s) < i || (int)sizeof(str) - 1 < i) return -1;
-	for (s += i; *s && --n >= 0;) *p++ = *s++; *p = '\0';
-	if (sscanf(str, "%lf %lf %lf %lf %lf %lf", ep, ep + 1, ep + 2, ep + 3, ep + 4, ep + 5) < 6)
+	// 如果字符串异常，返回-1
+	if (i < 0 || (int)strlen(s) < i || (int)sizeof(str) - 1 < i) {
 		return -1;
-	if (ep[0] < 100.0) ep[0] += ep[0] < 80.0 ? 2000.0 : 1900.0;
-	*t = epoch2time(ep);
+	}
+	// 字符串复制
+	for (s += i; *s && --n >= 0;) {
+		*p++ = *s++; 
+		*p = '\0';
+	}
+	// 将str中的字符转存至ep中，若出错，返回-1
+	if (sscanf(str, "%lf %lf %lf %lf %lf %lf", ep, ep + 1, ep + 2, ep + 3, ep + 4, ep + 5) < 6) {
+		return -1;
+	}
+	// 将ep中的数字转成gpst格式
+	if (ep[0] < 100.0) {
+		ep[0] += ep[0] < 80.0 ? 2000.0 : 1900.0;
+		*t = epoch2time(ep);
+	} 
 	return 0;
 }
 /* convert calendar day/time to time -------------------------------------------
