@@ -932,9 +932,10 @@ static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char*
 /* decode ephemeris ----------------------------------------------------------*/
 static int decode_eph(double ver, int sat, gtime_t toc, const double* data, eph_t* eph)
 {
-	
-	eph_t eph0 = { 0 };
-	int sys;
+	/* 局部变量定义 ========================================================= */
+	eph_t eph0 = { 0 };					// 历元变量(全0)
+	int sys;							// 系统
+	/* 局部变量定义 ========================================================= */
 
 	sys = satsys(sat, NULL);
 
