@@ -584,17 +584,17 @@ typedef struct {        /* earth rotation parameter type */
     erpd_t *data;       /* earth rotation parameter data */
 } erp_t;
 
-typedef struct {        /* antenna parameter type */
-    int sat;            /* satellite number (0:receiver) */
-    char type[MAXANT];  /* antenna type */
-    char code[MAXANT];  /* serial number or satellite code */
-    gtime_t ts,te;      /* valid time start and end */
-    double off[NSYS_USED*NFREQ][3]; /* phase center offset e/n/u or x/y/z (m) */
-    double var[NSYS_USED*NFREQ][80*20]; /* phase center variation (m) */
-                                /* el=90,85,...,0 or nadir=0,1,2,3,... (deg) */
-	double dazi;             //Increment of the azimuth£º0 to 360 with increment 'DAZI'(in degrees).
-	double zen1,zen2,dzen;   //Receiver antenna:Definition of the grid in zenith angle.
-	                         //Satellite antenna:Definition of the grid in nadir angle.
+typedef struct {                         /* antenna parameter type */
+    int sat;                             /* satellite number (0:receiver) */
+    char type[MAXANT];                   /* antenna type */
+    char code[MAXANT];                   /* serial number or satellite code */
+    gtime_t ts,te;                       /* valid time start and end */
+    double off[NSYS_USED*NFREQ][3];      /* phase center offset e/n/u or x/y/z (m) */
+    double var[NSYS_USED*NFREQ][80*20];  /* phase center variation (m) */
+                                         /* el=90,85,...,0 or nadir=0,1,2,3,... (deg) */
+	double dazi;                         //Increment of the azimuth£º0 to 360 with increment 'DAZI'(in degrees).
+	double zen1,zen2,dzen;               //Receiver antenna :Definition of the grid in zenith angle.
+	                                     //Satellite antenna:Definition of the grid in nadir angle.
 } pcv_t;
 
 typedef struct {        /* antenna parameters type */
@@ -1214,11 +1214,11 @@ typedef struct {
 	int    bGross[2];
 } ssatEx_t;
 
-typedef struct {
-	int  prn;
-	int  sys;
-	char id[4];
-	char type[21];
+typedef struct {    // sat flag
+	int  prn;       // sat PRN
+	int  sys;       // sat system
+	char id[4];     // sat ID
+	char type[21];  // sat type
 } satFlag_t;
 
 typedef struct {

@@ -109,7 +109,7 @@ static int readobsnav(gtime_t ts, gtime_t te, double ti, char* infile[MAXINFILE]
 	PPP_Glo.nEpoch = 0;
 
 	for (i = 0; i < n; i++) {
-		/* read rinex obs and nav file */
+		/* 1.read rinex obs and nav file */
 		nep = readrnxt(infile[i], rcv, ts, te, ti, prcopt->rnxopt, obs, nav, rcv <= 2 ? sta + rcv - 1 : NULL);
 	}
 	if (obs->n <= 0) {
@@ -121,13 +121,13 @@ static int readobsnav(gtime_t ts, gtime_t te, double ti, char* infile[MAXINFILE]
 		return 0;
 	}
 
-	/* sort observation data */
+	/* 2.sort observation data obs排序 */
 	PPP_Glo.nEpoch = sortobs(obs);
 
-	/* delete duplicated ephemeris */
+	/* 3.delete duplicated ephemeris nav剔除重复 */
 	uniqnav(nav);
 
-	/* set time span for progress display */
+	/* 4.set time span for progress display */
 	if (ts.time == 0 || te.time == 0) {
 		for (i = 0; i < obs->n; i++) if (obs->data[i].rcv == 1) break;
 		for (j = obs->n - 1; j >= 0; j--) if (obs->data[j].rcv == 1) break;
@@ -154,8 +154,7 @@ static void freeobsnav(obs_t* obs, nav_t* nav)
 	if (nav->geph) { free(nav->geph); nav->geph = NULL; nav->ng = nav->ngmax = 0; }
 }
 /* set antenna parameters ----------------------------------------------------*/
-static void setpcv(gtime_t time, prcopt_t* popt, nav_t* nav, const pcvs_t* pcvs,
-	const pcvs_t* pcvr, const sta_t* sta)
+static void setpcv(gtime_t time, prcopt_t* popt, nav_t* nav, const pcvs_t* pcvs, const pcvs_t* pcvr, const sta_t* sta)
 {
 	pcv_t* pcv;
 	double pos[3], del[3], dt;
@@ -175,15 +174,14 @@ static void setpcv(gtime_t time, prcopt_t* popt, nav_t* nav, const pcvs_t* pcvs,
 		if (pcv->dzen == 0.0) j = 10;
 		else j = myRound((pcv->zen2 - pcv->zen1) / pcv->dzen);
 
-		if (sys == SYS_GPS) k = 0;
+		if		(sys == SYS_GPS) k = 0;
 		else if (sys == SYS_GLO) k = 0 + 1 * NFREQ;
 		else if (sys == SYS_CMP) k = 0 + 2 * NFREQ;
 		else if (sys == SYS_GAL) k = 0 + 3 * NFREQ;
 		//double dt=norm(pcv->var[0],j);
 		dt = norm(pcv->var[k], j);
 		if (dt <= 0.0001) {
-			sprintf(PPP_Glo.chMsg, "%s ATTENTION! PRELIMINARY PHASE CENTER CORRECTIONS!\n",
-				PPP_Glo.sFlag[pcv->sat - 1].id);
+			sprintf(PPP_Glo.chMsg, "%s ATTENTION! PRELIMINARY PHASE CENTER CORRECTIONS!\n",PPP_Glo.sFlag[pcv->sat - 1].id);
 			outDebug(OUTWIN, OUTFIL, 0);
 		}
 	}
@@ -814,9 +812,12 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 	rtk_t rtk;
 
 	//to determine the thresh values for cycle slip detection
+	/* 1.计算采样率sample */
 	PPP_Glo.sample = sampledetermine(popt);
-	if (fabs(PPP_Glo.prcOpt_Ex.csThresGF) < 0.01 || fabs(PPP_Glo.prcOpt_Ex.csThresMW) < 0.01)
+	/* 2.计算周跳检测阈值 */
+	if (fabs(PPP_Glo.prcOpt_Ex.csThresGF) < 0.01 || fabs(PPP_Glo.prcOpt_Ex.csThresMW) < 0.01) {
 		calCsThres(popt, PPP_Glo.sample);
+	}
 
 	rtkinit(&rtk, popt);
 
@@ -934,15 +935,19 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 	for (i = 0; i < MAXSAT; i++) for (j = 0; j < 3; j++) {
 		navs.cbias[i][j] = 0.0;
 	}
-	if (*fopt->p1p2dcbf)
+	if (*fopt->p1p2dcbf) {
 		readdcb(fopt->p1p2dcbf, &navs);
-	if (*fopt->p1c1dcbf)
+	}
+	if (*fopt->p1c1dcbf) {
 		readdcb(fopt->p1c1dcbf, &navs);
-	if (*fopt->p2c2dcbf)
+	}
+	if (*fopt->p2c2dcbf) {
 		readdcb(fopt->p2c2dcbf, &navs);
-	if (*fopt->mgexdcbf && (popt->navsys & SYS_CMP || popt->navsys & SYS_GAL))
+	}
+	if (*fopt->mgexdcbf && (popt->navsys & SYS_CMP || popt->navsys & SYS_GAL)) {
 		readdcb_mgex(fopt->mgexdcbf, &navs, PPP_Glo.prcOpt_Ex.ts);
-
+	}
+	
 	/* 6.read erp data 读erp文件 */
 	if (*fopt->eopf) {
 		if (!readerp(fopt->eopf, &navs.erp)) {
@@ -955,8 +960,10 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 		PPP_Glo.prcOpt_Ex.ion_const)))
 		readtec(fopt->ionf, &navs, 1);
 
-	for (i = 0; i < MAXINFILE; i++) index[i] = i;
-
+	for (i = 0; i < MAXINFILE; i++) {
+		index[i] = i;
+	}
+	
 	/* 8.read prec ephemeris 读Sp3精密星历 */
 	readpreceph(fopt->inf, MAXINFILE, popt, &navs);
 
@@ -966,11 +973,11 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 		return 0;
 	}
 
+	/* 如果obs历元个数少于1，则报错并返回0 */
 	if (PPP_Glo.nEpoch <= 1) {
 		strcpy(PPP_Glo.chMsg, "PPP_Glo.nEpoch<=1!\n\0");
 		printf("%s", PPP_Glo.chMsg);
 		freeobsnav(&obss, &navs);
-
 		return 0;
 	}
 
@@ -978,7 +985,7 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 	/* set antenna paramters */
 	setpcv(obss.data[0].time, popt, &navs, &pcvss, &pcvss, stas);
 
-	/* read ocean tide loading parameters */
+	/* 10.read ocean tide loading parameters 读blq海洋潮文件 */
 	if (popt->mode > PMODE_SINGLE && fopt->blqf) {
 		readotl(popt, fopt->blqf, stas);
 	}

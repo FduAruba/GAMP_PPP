@@ -958,20 +958,20 @@ static int decode_eph(double ver, int sat, gtime_t toc, const double* data, eph_
 	eph->cus = data[9]; eph->cic = data[12]; eph->cis = data[14];
 
 	if (sys == SYS_GPS || sys == SYS_QZS) {
-		eph->iode = (int)data[3];      /* IODE */
+		eph->iode = (int)data[3];		/* IODE */
 		eph->iodc = (int)data[26];      /* IODC */
-		eph->toes = data[11];      /* toe (s) in gps week */
+		eph->toes = data[11];			/* toe (s) in gps week */
 		eph->week = (int)data[21];      /* gps week */
-		eph->toe = adjweek(gpst2time(eph->week, data[11]), toc);
-		eph->ttr = adjweek(gpst2time(eph->week, data[27]), toc);
+		eph->toe  = adjweek(gpst2time(eph->week, data[11]), toc);
+		eph->ttr  = adjweek(gpst2time(eph->week, data[27]), toc);
 
 		eph->code = (int)data[20];      /* GPS: codes on L2 ch */
-		eph->svh = (int)data[24];      /* sv health */
-		eph->sva = uraindex(data[23]);  /* ura (m->index) */
+		eph->svh  = (int)data[24];      /* sv health */
+		eph->sva  = uraindex(data[23]); /* ura (m->index) */
 		eph->flag = (int)data[22];      /* GPS: L2 P data flag */
 
-		eph->tgd[0] = data[25];      /* TGD */
-		eph->fit = data[28];      /* fit interval */
+		eph->tgd[0] = data[25];			/* TGD */
+		eph->fit	= data[28];			/* fit interval */
 	}
 	else if (sys == SYS_GAL) { /* GAL ver.3 */
 		eph->iode = (int)data[3];      /* IODnav */
@@ -1194,7 +1194,7 @@ static int readrnxnav(FILE* fp, const char* opt, double ver, int sys, nav_t* nav
 		if (stat) {
 			switch (type) {
 			case  1: stat = add_geph(nav, &geph); break;
-			default: stat = add_eph(nav, &eph); break;
+			default: stat = add_eph(nav, &eph)  ; break;
 			}
 			if (!stat) return 0;
 		}
@@ -1355,7 +1355,7 @@ extern int readrnxt(const char* file, int rcv, gtime_t ts, gtime_t te, double ti
 
 	stat = readrnxfile(file, ts, te, tint, opt, 0, rcv, &type, obs, nav, sta);
 
-	/* if station name empty, set 4-char name from file head */
+	/* if station name empty, set 4-char name from file head 给站名赋值(4位) */
 	if (type == 'O' && sta) {
 		if (!(p = strrchr(file, FILEPATHSEP))) p = file - 1;
 		if (!*sta->name) setstr(sta->name, p + 1, 4);

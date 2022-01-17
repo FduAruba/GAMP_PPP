@@ -1156,8 +1156,9 @@ extern int str2time(const char* s, int i, int n, gtime_t* t)
 	// 将ep中的数字转成gpst格式
 	if (ep[0] < 100.0) {
 		ep[0] += ep[0] < 80.0 ? 2000.0 : 1900.0;
-		*t = epoch2time(ep);
+		
 	} 
+	*t = epoch2time(ep);
 	return 0;
 }
 /* convert calendar day/time to time -------------------------------------------
@@ -2200,8 +2201,7 @@ extern int readpcv(const char* file, pcvs_t* pcvs)
 *          pcvs_t *pcvs       IO  antenna parameters
 * return : antenna parameter (NULL: no antenna)
 *-----------------------------------------------------------------------------*/
-extern pcv_t* searchpcv(int sat, const char* type, gtime_t time,
-	const pcvs_t* pcvs)
+extern pcv_t* searchpcv(int sat, const char* type, gtime_t time, const pcvs_t* pcvs)
 {
 	pcv_t* pcv;
 	char buff[MAXANT], * types[2], * p;
@@ -2216,7 +2216,7 @@ extern pcv_t* searchpcv(int sat, const char* type, gtime_t time,
 			return pcv;
 		}
 	}
-	else {
+	else {		/* search receiver antenna */
 		strcpy(buff, type);
 		for (p = strtok(buff, " "); p && n < 2; p = strtok(NULL, " ")) types[n++] = p;
 		if (n <= 0) return NULL;
@@ -2517,19 +2517,26 @@ extern void uniqnav(nav_t* nav)
 	uniqgeph(nav);
 
 	/* update carrier wave length */
-	for (i = 0; i < MAXSAT; i++) for (j = 0; j < NFREQ; j++) {
-		nav->lam[i][j] = satwavelen(i + 1, j, nav);
-		PPP_Glo.lam[i][j] = nav->lam[i][j];
+	for (i = 0; i < MAXSAT; i++) {
+		for (j = 0; j < NFREQ; j++) {
+			nav->lam[i][j] = satwavelen(i + 1, j, nav);
+			PPP_Glo.lam[i][j] = nav->lam[i][j];
+		}
 	}
 }
 /* compare observation data -------------------------------------------------*/
 static int cmpobs(const void* p1, const void* p2)
 {
 	obsd_t* q1 = (obsd_t*)p1, * q2 = (obsd_t*)p2;
+
 	double tt = timediff(q1->time, q2->time);
-	if (fabs(tt) > DTTOL) return tt < 0 ? -1 : 1;
-	if (q1->rcv != q2->rcv) return (int)q1->rcv - (int)q2->rcv;
-	return (int)q1->sat - (int)q2->sat;
+	if (fabs(tt) > DTTOL) {		// 先根据时间排
+		return tt < 0 ? -1 : 1;
+	}
+	if (q1->rcv != q2->rcv) {	// 再根据接收机号牌
+		return (int)q1->rcv - (int)q2->rcv;
+	}
+	return (int)q1->sat - (int)q2->sat;	// 最后根据卫星号排
 }
 /* sort and unique observation data --------------------------------------------
 * sort and unique observation data by time, rcv, sat
@@ -2548,12 +2555,11 @@ extern int sortobs(obs_t* obs)
 
 	/* delete duplicated data */
 	for (i = j = 0; i < obs->n; i++) {
-		if (obs->data[i].sat != obs->data[j].sat ||
-			obs->data[i].rcv != obs->data[j].rcv ||
-			timediff(obs->data[i].time, obs->data[j].time) != 0.0) {
+		if (obs->data[i].sat != obs->data[j].sat ||						// 比较卫星
+			obs->data[i].rcv != obs->data[j].rcv ||						// 比较接收机
+			timediff(obs->data[i].time, obs->data[j].time) != 0.0) {	// 比较时间
 			obs->data[++j] = obs->data[i];
 		}
-		//如果有重复历元，提示输出
 		else if (j != 0) {
 			for (k = 0; k < NFREQ; k++) {
 				if (obs->data[i].L[k] != obs->data[j].L[k]) { bDif = 1; break; }
@@ -2562,15 +2568,14 @@ extern int sortobs(obs_t* obs)
 				if (bDif) break;
 			}
 			time2epoch(obs->data[i].time, ct);
-			sprintf(PPP_Glo.chTime, "%4.0f%02.0f%02.0f %02.0f%02.0f%04.1f%c",
-				ct[0], ct[1], ct[2], ct[3], ct[4], ct[5], '\0');
-			sprintf(PPP_Glo.chMsg, "%s  G%02d epoch repeat Dif=%d %5s\n",
-				PPP_Glo.chTime, obs->data[i].sat, bDif, bDif ? "qqqq" : "");
+			sprintf(PPP_Glo.chTime, "%4.0f%02.0f%02.0f %02.0f%02.0f%04.1f%c", ct[0], ct[1], ct[2], ct[3], ct[4], ct[5], '\0');
+			sprintf(PPP_Glo.chMsg, "%s  G%02d epoch repeat Dif=%d %5s\n", PPP_Glo.chTime, obs->data[i].sat, bDif, bDif ? "qqqq" : "");
 			outDebug(OUTWIN, OUTFIL, OUTTIM);
 		}
 	}
 	obs->n = j + 1;
 
+	// 查找有多少个obs历元
 	for (i = n = 0; i < obs->n; i = j, n++) {
 		for (j = i + 1; j < obs->n; j++) {
 			if (timediff(obs->data[j].time, obs->data[i].time) > DTTOL) break;
