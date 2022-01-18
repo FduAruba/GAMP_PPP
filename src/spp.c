@@ -356,7 +356,8 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 {
 	/* 局部变量定义 ========================================================= */
 	int bObserved[5];
-	int i, j, nv = 0, ns[5] = { 0 }, sys, satsn[MAXOBS], sat;
+	int i, j;
+	int nv = 0, ns[5] = { 0 }, sys, satsn[MAXOBS], sat;
 	double r, dion, dtrp, vion, vtrp, rr[3], pos[3], dtr, e[3], P, elev_t[MAXSAT], vmeas, lam_L1;
 	double elmin;
 	int bMulGNSS;
@@ -372,7 +373,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 
 	ecef2pos(rr, pos);
 
-	for (i = 0; i < n && i < MAXOBS; i++) {
+	for (i = 0; i < n && i < MAXOBS; i++) {	// i遍历所有卫星
 		sat = obs[i].sat;
 
 		vsat[i] = 0; azel[i * 2] = azel[1 + i * 2] = resp[i] = 0.0;
@@ -414,7 +415,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 		}
 
 		/* psudorange with code bias correction */
-		if ((P = prange(obs + i, nav, azel + i * 2, opt, &vmeas)) == 0.0) continue;
+		if ((P = prange(obs + i, nav, azel + i * 2, opt, &vmeas)) == 0.0) { continue; }
 
 		/* excluded satellite */
 		if (satexclude(obs[i].sat, svh[i], opt)) continue;

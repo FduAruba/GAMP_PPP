@@ -3053,13 +3053,15 @@ extern int get_glo_fcn(int sat, const nav_t* nav)
 *-----------------------------------------------------------------------------*/
 extern double geodist(const double* rs, const double* rr, double* e)
 {
-	double r;
-	int i;
+	/* 局部变量定义 ========================================================= */
+	double r;					// 几何距离(3维)
+	int i;						// 循环遍历变量
+	/* ====================================================================== */
 
-	if (norm(rs, 3) < RE_WGS84) return -1.0;
-	for (i = 0; i < 3; i++) e[i] = rs[i] - rr[i];
+	if (norm(rs, 3) < RE_WGS84) { return -1.0; }
+	for (i = 0; i < 3; i++) { e[i] = rs[i] - rr[i]; }
 	r = norm(e, 3);
-	for (i = 0; i < 3; i++) e[i] /= r;
+	for (i = 0; i < 3; i++) { e[i] /= r; }
 	return r + OMGE * (rs[0] * rr[1] - rs[1] * rr[0]) / CLIGHT;
 }
 /* satellite azimuth/elevation angle -------------------------------------------
