@@ -1238,8 +1238,8 @@ typedef struct {
 	//cycle slip set
 	double csThresGF;      //slip threshold of geometry-free phase (m)
 	double csThresMW;      //slip threshold of MW phase (m)
-	int bUsed_gfCs;
-	int bUsed_mwCs;
+	int bUsed_gfCs;        // 使用GF标记符
+	int bUsed_mwCs;        // 使用MW标记符
 
 	double tPrcUnit;
 
@@ -1304,8 +1304,8 @@ typedef struct {
 	double ifBias[MAXSAT];
 	double ucBias[MAXSAT][3];
 
-	int bOKSPP;
-	int nBadEpSPP;
+	int bOKSPP;                 // SPP定位成功标识符
+	int nBadEpSPP;              // SPP定位失败历元数计数
 
 	double ecliF[MAXSAT];
 
@@ -1394,32 +1394,32 @@ typedef struct {        /* RINEX options type */
     int nobs[7];        /* number of obs types {GPS,GLO,GAL,QZS,SBS,CMP,IRN} */
 } rnxopt_t;
 
-typedef struct {        /* satellite status type */
-    unsigned char sys;  /* navigation system */
-    unsigned char vs;   /* valid satellite flag single */
-    double azel[2];     /* azimuth/elevation angles {az,el} (rad) */
-    double resp[NFREQ]; /* residuals of pseudorange (m) */
-    double resc[NFREQ]; /* residuals of carrier-phase (m) */
-	double resp_pri[NFREQ]; /* residuals of pseudorange (m) */
-	double resc_pri[NFREQ]; /* residuals of carrier-phase (m) */
-	double resp_pos[NFREQ]; /* residuals of pseudorange (m) */
-	double resc_pos[NFREQ]; /* residuals of carrier-phase (m) */
-    double PC,LC;       /* ionosphere-free pseudorange and carrier phase observations */
-    unsigned char vsat[NFREQ]; /* valid satellite flag */
-    unsigned char snr [NFREQ]; /* signal strength (0.25 dBHz) */
-    unsigned char fix [NFREQ]; /* ambiguity fix flag (1:fix,2:float,3:hold) */
-    unsigned char slip[NFREQ]; /* cycle-slip flag */
-    unsigned char half[NFREQ]; /* half-cycle valid flag */
-    int lock [NFREQ];   /* lock counter of phase */
-    unsigned int outc [NFREQ]; /* obs outage counter of phase */
-    unsigned int slipc[NFREQ]; /* cycle-slip counter */
-    unsigned int rejc [NFREQ]; /* reject counter */
-    double  gf;         /* geometry-free phase L1-L2 (m) */
-    double  gf2;        /* geometry-free phase L1-L5 (m) */
-    double  mw;         /* MW-LC (m) */
-    double  phw;        /* phase windup (cycle) */
-    gtime_t pt[2][NFREQ]; /* previous carrier-phase time */
-    double  ph[2][NFREQ]; /* previous carrier-phase observable (cycle) */
+typedef struct {                /* satellite status type */
+    unsigned char sys;          /* navigation system */
+    unsigned char vs;           /* valid satellite flag single */
+    double azel[2];             /* azimuth/elevation angles {az,el} (rad) */
+    double resp[NFREQ];         /* residuals of pseudorange (m) */
+    double resc[NFREQ];         /* residuals of carrier-phase (m) */
+	double resp_pri[NFREQ];     /* residuals of pseudorange (m) */
+	double resc_pri[NFREQ];     /* residuals of carrier-phase (m) */
+	double resp_pos[NFREQ];     /* residuals of pseudorange (m) */
+	double resc_pos[NFREQ];     /* residuals of carrier-phase (m) */
+    double PC,LC;               /* ionosphere-free pseudorange and carrier phase observations */
+    unsigned char vsat[NFREQ];  /* valid satellite flag */
+    unsigned char snr [NFREQ];  /* signal strength (0.25 dBHz) */
+    unsigned char fix [NFREQ];  /* ambiguity fix flag (1:fix,2:float,3:hold) */
+    unsigned char slip[NFREQ];  /* cycle-slip flag */
+    unsigned char half[NFREQ];  /* half-cycle valid flag */
+    int lock [NFREQ];           /* lock counter of phase */
+    unsigned int outc [NFREQ];  /* obs outage counter of phase */
+    unsigned int slipc[NFREQ];  /* cycle-slip counter */
+    unsigned int rejc [NFREQ];  /* reject counter */
+    double  gf;                 /* geometry-free phase L1-L2 (m) */
+    double  gf2;                /* geometry-free phase L1-L5 (m) */
+    double  mw;                 /* MW-LC (m) */
+    double  phw;                /* phase windup (cycle) */
+    gtime_t pt[2][NFREQ];       /* previous carrier-phase time */
+    double  ph[2][NFREQ];       /* previous carrier-phase observable (cycle) */
 } ssat_t;
 
 typedef struct {        /* ambiguity control type */

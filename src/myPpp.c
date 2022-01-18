@@ -7,6 +7,7 @@ extern int calCsThres(prcopt_t* opt, const double sample)
 {
 	int b = 0;
 
+	// 根据采样率sample设置GF和MW的阈值
 	if (sample > 0.0) {
 		if (PPP_Glo.prcOpt_Ex.bUsed_gfCs == 1 && fabs(PPP_Glo.prcOpt_Ex.csThresGF) < 0.01) {
 			if (sample <= 1.0)        PPP_Glo.prcOpt_Ex.csThresGF = 0.05;
@@ -28,8 +29,7 @@ extern int calCsThres(prcopt_t* opt, const double sample)
 
 		return b;
 	}
-	else {
-		//sample<=0.0
+	else {	//sample<=0.0
 		PPP_Glo.prcOpt_Ex.csThresGF = 0.15;
 		PPP_Glo.prcOpt_Ex.csThresMW = 5.0;
 		b = 0;
@@ -41,27 +41,30 @@ extern int calCsThres(prcopt_t* opt, const double sample)
 //pseudorange observation checking
 extern void obsScan_SPP(const prcopt_t* popt, obsd_t* obs, const int nobs, int* nValid)
 {
-	double dt;
-	int i, j, n, sat, sys;
+	/* 局部变量定义 ========================================================= */
+	double dt;					// 判断符(是否为0)
+	int i, j;					// 循环遍历变量
+	int n, sat, sys;			// 有效obs个数/卫星号/系统号
+	/* ====================================================================== */
 
 	for (i = n = 0; i < nobs; i++) {
 		sat = obs[i].sat;
 		sys = PPP_Glo.sFlag[sat - 1].sys;
 
 		/* exclude satellites */
-		if (!(sys & popt->navsys)) continue;
-		if (popt->exsats[sat - 1])	 continue;
+		if (!(sys & popt->navsys))	 continue;	// 1.系统不符，剔除
+		if (popt->exsats[sat - 1])	 continue;	// 2.选项设置剔除
 
 		dt = 0.0;
 		for (j = 0; j < NFREQ; j++) {
 			dt += obs[i].P[j] * obs[i].P[j];
 		}
-		if (dt == 0.0)	 continue;
+		if (dt == 0.0)				 continue;	// 3.三频伪距均为0，剔除
 
 		obs[n++] = obs[i];
 	}
 
-	if (nValid) *nValid = n;
+	if (nValid) *nValid = n;	// 返回有效卫星数
 }
 extern void obsScan_PPP(const prcopt_t* popt, obsd_t* obs, const int nobs, int* nValid)
 {
@@ -111,14 +114,19 @@ extern void BDmultipathCorr(rtk_t* rtk, obsd_t* obs, int n)
 
 	for (i = 0; i < n && i < MAXOBS; i++) {
 		sat = obs[i].sat;
-		if (PPP_Glo.sFlag[sat - 1].sys != SYS_CMP) continue;
+		if (PPP_Glo.sFlag[sat - 1].sys != SYS_CMP) {	// 查找北斗卫星
+			continue;
+		}
 
 		prn = PPP_Glo.sFlag[sat - 1].prn;
-		if (prn <= 5) continue;
+		if (prn <= 5) {									// 剔除GEO卫星
+			continue;
+		}
 
 		elev = rtk->ssat[sat - 1].azel[1] * R2D;
-
-		if (elev <= 0.0) continue;
+		if (elev <= 0.0) {								// 剔除仰角为0的
+			continue;
+		}
 
 		for (j = 0; j < 3; j++) dmp[j] = 0.0;
 
@@ -136,7 +144,7 @@ extern void BDmultipathCorr(rtk_t* rtk, obsd_t* obs, int n)
 				for (j = 0; j < 3; j++) dmp[j] = IGSOCOEF[j][b] * (1.0 - a + b) + IGSOCOEF[j][b + 1] * (a - b);
 			}
 		}
-		else if (prn >= 11) {   // MEO(C11, C12, C13, C14)
+		else if (prn >= 11) {		// MEO(C11, C12, C13, C14)
 			if (b < 0) {
 				for (j = 0; j < 3; j++) dmp[j] = MEOCOEF[j][0];
 			}

@@ -18,25 +18,45 @@ static sta_t stas[MAXRCV];			/* station infomation */
 /* search next observation data index ----------------------------------------*/
 static int nextobsf(const obs_t* obs, int* i, int rcv)
 {
-	double tt;
-	int n;
+	/* 局部变量定义 ========================================================= */
+	double tt;				// 历元时间差
+	int n;					// 当前历元obs个数
+	/* ====================================================================== */
 
-	for (; *i < obs->n; (*i)++) if (obs->data[*i].rcv == rcv) break;
+	// 根据接收机号rcv定位第一个obs位置
+	for (; *i < obs->n; (*i)++) {
+		if (obs->data[*i].rcv == rcv) {
+			break;
+		}
+	}
+	// 根据前后历元的时间差tt，计算当前历元包含obs的个数
 	for (n = 0; *i + n < obs->n; n++) {
 		tt = timediff(obs->data[*i + n].time, obs->data[*i].time);
-		if (obs->data[*i + n].rcv != rcv || tt > DTTOL) break;
+		if (obs->data[*i + n].rcv != rcv || tt > DTTOL) {
+			break;
+		}
 	}
 	return n;
 }
 static int nextobsb(const obs_t* obs, int* i, int rcv)
 {
+	/* 局部变量定义 ========================================================= */
 	double tt;
 	int n;
+	/* ====================================================================== */
 
-	for (; *i >= 0; (*i)--) if (obs->data[*i].rcv == rcv) break;
+	// 根据接收机号rcv定位第一个obs位置(倒过来数)
+	for (; *i >= 0; (*i)--) {
+		if (obs->data[*i].rcv == rcv) {
+			break;
+		}
+	}
+	// 根据前后历元的时间差tt，计算当前历元包含obs的个数
 	for (n = 0; *i - n >= 0; n++) {
 		tt = timediff(obs->data[*i - n].time, obs->data[*i].time);
-		if (obs->data[*i - n].rcv != rcv || tt < -DTTOL) break;
+		if (obs->data[*i - n].rcv != rcv || tt < -DTTOL) {
+			break;
+		}
 	}
 	return n;
 }
@@ -46,19 +66,27 @@ int inputobs(obsd_t* obs, obs_t obss, int revs, int* iobsu, int* iepoch)
 	int i, nu, n = 0;
 
 	if (!revs) {    /* input forward data */
-		if ((nu = nextobsf(&obss, iobsu, 1)) <= 0)
+		// 获取当前历元obs个数nu，并更新obs索引iobsu
+		if ((nu = nextobsf(&obss, iobsu, 1)) <= 0) {
 			return -1;
-		for (i = 0; i < nu && n < MAXOBS; i++)
+		}
+		// 将当前历元的obs数据转存到obs[]中
+		for (i = 0; i < nu && n < MAXOBS; i++) {
 			obs[n++] = obss.data[*iobsu + i];
-		*iobsu += nu;
+		}
+		*iobsu  += nu;
 		*iepoch += 1;
 	}
 	else {        /* input backward data */
-		if ((nu = nextobsb(&obss, iobsu, 1)) <= 0)
+		// 获取当前历元obs个数nu，并更新obs索引iobsu
+		if ((nu = nextobsb(&obss, iobsu, 1)) <= 0) {
 			return -1;
-		for (i = 0; i < nu && n < MAXOBS; i++)
+		}
+		// 将当前历元的obs数据转存到obs[]中
+		for (i = 0; i < nu && n < MAXOBS; i++) {
 			obs[n++] = obss.data[*iobsu - nu + 1 + i];
-		*iobsu -= nu;
+		}
+		*iobsu  -= nu;
 		*iepoch -= 1;
 	}
 	return n;
@@ -493,20 +521,30 @@ static int clkRepair(obsd_t* obs, int n)
 	double* lam;
 	double CJ_F1, CJ_F2;
 
-	for (i = 0; i < MAXPRNGPS; i++) bObserved[i] = 0;
+	
+	// 将当前历元观测标记置0
+	for (i = 0; i < MAXPRNGPS; i++) {
+		bObserved[i] = 0;
+	}
 
 	validGps = cjGps = 0;
 
+	// 检测钟跳
 	for (i = 0; i < n; i++) {
 		sat = obs[i].sat;
 		lam = PPP_Glo.lam[sat - 1];
-
-		if (sat > MAXPRNGPS) continue;
-
-		if (obs[i].P[0] * obs[i].P[1] * obs[i].L[0] * obs[i].L[1] == 0.0) continue;
-
-		if (PPP_Glo.obs0[sat - 1][0] * PPP_Glo.obs0[sat - 1][1] * PPP_Glo.obs0[sat - 1][2] * PPP_Glo.obs0[sat - 1][3] == 0.0)
+		// 不是GPS卫星，剔除
+		if (sat > MAXPRNGPS) {
 			continue;
+		}
+		// 双频伪距/相位缺失，剔除
+		if (obs[i].P[0] * obs[i].P[1] * obs[i].L[0] * obs[i].L[1] == 0.0) {
+			continue;
+		}
+		// 全局obs缺失，剔除
+		if (PPP_Glo.obs0[sat - 1][0] * PPP_Glo.obs0[sat - 1][1] * PPP_Glo.obs0[sat - 1][2] * PPP_Glo.obs0[sat - 1][3] == 0.0) {
+			continue;
+		}
 
 		validGps++;
 
@@ -523,6 +561,7 @@ static int clkRepair(obsd_t* obs, int n)
 		}
 	}
 
+	// 计算钟跳值
 	if (cjGps != 0 && cjGps == validGps)
 	{
 		d1 = delta0 / cjGps;
@@ -539,13 +578,10 @@ static int clkRepair(obsd_t* obs, int n)
 			sprintf(PPP_Glo.chMsg, "*** WARNING: clock jump=%d(ms)\n", PPP_Glo.clkJump);
 			outDebug(OUTWIN, OUTFIL, 0);
 		}
-		else
-		{
-			//
-		}
+		else { ; }
 	}
 
-	//
+	// 修正钟跳
 	for (i = 0; i < n; i++)
 	{
 		sat = obs[i].sat;
@@ -564,18 +600,10 @@ static int clkRepair(obsd_t* obs, int n)
 
 		//repair for phase observations
 		if (obs[i].L[0] != 0.0) obs[i].L[0] += ddd1 / lam[0];
-
 		if (obs[i].L[1] != 0.0) obs[i].L[1] += ddd2 / lam[1];
-
-		//repair for code observations
-		//if( obs[i].P[0]!=0.0 ) {
-		//    obs[i].P[0]-=PPP_Glo.clkjump*CLIGHT/1000;
-		//}
-		//if( obs[i].P[1]!=0.0 ) {
-		//    obs[i].P[1]-=PPP_Glo.clkjump*CLIGHT/1000;
-		//}
 	}
 
+	// 当前历元未观测到的卫星将obs0全部清0
 	for (i = 0; i < MAXPRNGPS; i++) {
 		if (bObserved[i] == 0)
 			PPP_Glo.obs0[i][0] = PPP_Glo.obs0[i][1] = PPP_Glo.obs0[i][2] = PPP_Glo.obs0[i][3] = 0.0;
@@ -608,31 +636,34 @@ static double calDop(rtk_t* rtk, const obsd_t* obs, const int n)
 
 	return dop[1];
 }
-/* initialize rtk control ------------------------------------------------------
+/* initialize rtk control ----------------------------------------------------
 * initialize rtk control struct
 * args   : rtk_t    *rtk    IO  rtk control/result struct
 *          prcopt_t *opt    I   positioning options (see rtklib.h)
 * return : none
-*-----------------------------------------------------------------------------*/
+--------------------------------------------------------------------------- */
 static void rtkinit(rtk_t* rtk, const prcopt_t* opt)
 {
-	sol_t sol0 = { {0} };
-	ssat_t ssat0 = { 0 };
-	int i;
+	/* 局部变量定义 ======================================================= */
+	sol_t  sol0  = { {0} };			// 解算设置
+	ssat_t ssat0 = { 0 };			// 卫星状态
+	int i;							// 循环遍历变量
+	/* ==================================================================== */
 
 	rtk->sol = sol0;
+	rtk->nx = pppnx(opt);			// 位置量个数
+	rtk->na = 3;					// 待固定量个数
+	rtk->tt = 0.0;					// 时间差
 
-	rtk->nx = pppnx(opt);
-
-	rtk->na = 3;
-	rtk->tt = 0.0;
-	rtk->x = zeros(rtk->nx, 1);
-	rtk->P = zeros(rtk->nx, rtk->nx);
+	rtk->x  = zeros(rtk->nx, 1);
+	rtk->P  = zeros(rtk->nx, rtk->nx);
 	rtk->xa = zeros(rtk->na, 1);
 	rtk->Pa = zeros(rtk->na, rtk->na);
 
 	rtk->nfix = 0;
-	for (i = 0; i < MAXSAT; i++) rtk->ssat[i] = ssat0;
+	for (i = 0; i < MAXSAT; i++) {
+		rtk->ssat[i] = ssat0;
+	}
 	rtk->opt = *opt;
 }
 static void rtkfree(rtk_t* rtk)
@@ -698,16 +729,18 @@ static void rtkfree(rtk_t* rtk)
 *-----------------------------------------------------------------------------*/
 static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 {
-	gtime_t time;
-	int nu;
-	char msg[128] = "";
-	prcopt_t* opt = &rtk->opt;
+	/* 局部变量定义 ========================================================= */
+	gtime_t time;						// GPS时间变量
+	int nu;								// 有效obs数
+	char msg[128] = "";					// 错误信息字符串
+	prcopt_t* opt = &rtk->opt;			// 处理选项
+	/* ====================================================================== */
 
 	rtk->sol.stat = SOLQ_NONE;
-	time = rtk->sol.time;  /* previous epoch */
+	time = rtk->sol.time;	/* previous epoch */
 	PPP_Glo.bOKSPP = 1;
 
-	/* rover position by single point positioning 通过SPP得到当前历元的初值 */
+	/* 1.rover position by single point positioning 通过SPP得到当前历元的初值 */
 	if (!spp(obs, n, nav, opt, &rtk->sol, NULL, rtk->ssat, msg)) {
 		sprintf(PPP_Glo.chMsg, "*** ERROR: point pos error (%s)\n", msg);
 		outDebug(OUTWIN, OUTFIL, 0);
@@ -723,7 +756,7 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 
 	if (time.time != 0) rtk->tt = timediff(rtk->sol.time, time);
 
-	/* - 检查当前历元的伪距，相位(伪距粗差剔除？) */
+	/* 2.通过筛选，更新有效卫星个数nu */
 	nu = n;
 	obsScan_PPP(opt, obs, n, &nu);
 	if (nu <= 4) {
@@ -732,14 +765,16 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 		return 0;
 	}
 
-	//clock jump repair 钟跳修复
+	/* 3.clock jump repair 钟跳修复 */
 	clkRepair(obs, nu);
 
-	/* precise point positioning */
+	/* 4.precise point positioning 执行PPP定位 */
 	if (opt->mode >= PMODE_PPP_KINEMA) {
 		pppos(rtk, obs, nu, nav);
 	}
-	else return 1;
+	else { 
+		return 1; 
+	}
 
 	//calculate DOPs
 	calDop(rtk, obs, nu);
@@ -752,43 +787,56 @@ static int rtkpos(rtk_t* rtk, obsd_t* obs, int n, const nav_t* nav)
 /* process positioning -------------------------------------------------------*/
 static void procpos(rtk_t* rtk, const prcopt_t* popt, const solopt_t* sopt, int mode)
 {
-	sol_t sol = { {0} };
-	gtime_t time = { 0 };
-	obsd_t obs[MAXOBS];
-	int i, j, k = 0, nep = 0, nobs, n, solstatic, pri[] = { 0,1,2,3,4,5,1,6 };
+	/* 局部变量定义 ========================================================= */
+	sol_t sol = { {0} };				// 解算结果结构体(全0)
+	gtime_t time = { 0 };				// gts时间变量
+	obsd_t obs[MAXOBS];					// obs结构体变量
+	int i, j, k = 0;					// 循环遍历变量
+	int nep = 0, nobs, n, solstatic;	// 历元个数/obs个数/有效obs个数/解算状态标记
+	int pri[] = { 0,1,2,3,4,5,1,6 };	// 优先级数组
+	/* ====================================================================== */
 
 	solstatic = sopt->solstatic && popt->mode == PMODE_PPP_STATIC;
 
 	/* processing epoch-wise */
+	/* 1.obs[]获取一个历元内所有的obs数据，并返回obs个数nobs */
 	while ((nobs = inputobs(obs, obss, PPP_Glo.revs, &PPP_Glo.iObsu, &PPP_Glo.iEpoch)) >= 0) {
+		
 		PPP_Glo.tNow = obs[0].time;
 		time2epoch(PPP_Glo.tNow, PPP_Glo.ctNow);
-		sprintf(PPP_Glo.chTime, "%02.0f:%02.0f:%04.1f%c", PPP_Glo.ctNow[3],
-			PPP_Glo.ctNow[4], PPP_Glo.ctNow[5], '\0');
+		sprintf(PPP_Glo.chTime, "%02.0f:%02.0f:%04.1f%c", PPP_Glo.ctNow[3], PPP_Glo.ctNow[4], PPP_Glo.ctNow[5], '\0');
 		PPP_Glo.sowNow = time2gpst(PPP_Glo.tNow, NULL);
 
 		k++;
+		// 第一个历元每个卫星时间(gpst)
 		if (k == 1) {
 			for (j = 0; j < MAXSAT; j++) {
 				PPP_Glo.ssat_Ex[j].tLast = PPP_Glo.tNow;
 			}
 		}
-		nep = (int)(30 * (60 / PPP_Glo.sample));
-		if ((k - 1) % nep == 0) PPP_Glo.t_30min = PPP_Glo.tNow;
+		// 计算30min包含多少个历元
+		nep = (int)(30 * (60 / PPP_Glo.sample));	
+		// 每30min更新一次时间
+		if ((k - 1) % nep == 0) {					
+			PPP_Glo.t_30min = PPP_Glo.tNow;
+		}
 
-		//pseudorange observation checking
+		/* 2.pseudorange observation checking 通过筛选，更新有效卫星个数n */
 		obsScan_SPP(popt, obs, nobs, &n);
+
+		// 如果有效卫星个数n<=3，则无法进行定位解算
 		if (n <= 3) {
 			sprintf(PPP_Glo.chMsg, "*** WARNING: There are only %d satellites observed, skip SPP!\n", n);
 			outDebug(OUTWIN, OUTFIL, 0);
 			continue;
 		}
 
-		// - 北斗卫星多径校正
+		/* 3.北斗卫星伪距多路径校正(IGSP/MEO) */
 		if (PPP_Glo.prcOpt_Ex.navSys & SYS_CMP) {
 			BDmultipathCorr(rtk, obs, n);
 		}
 
+		/* 4.执行ppp定位 */
 		i = rtkpos(rtk, obs, n, &navs);
 		if (i == -1) rtk->sol.stat = SOLQ_NONE;
 		else if (i == 0) continue;
@@ -811,37 +859,40 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 {
 	rtk_t rtk;
 
-	//to determine the thresh values for cycle slip detection
 	/* 1.计算采样率sample */
 	PPP_Glo.sample = sampledetermine(popt);
-	/* 2.计算周跳检测阈值 */
+
+	/* 2.设置周跳检测阈值 */
 	if (fabs(PPP_Glo.prcOpt_Ex.csThresGF) < 0.01 || fabs(PPP_Glo.prcOpt_Ex.csThresMW) < 0.01) {
 		calCsThres(popt, PPP_Glo.sample);
 	}
 
+	/* 3.rtk初始化 */
 	rtkinit(&rtk, popt);
 
-	if (PPP_Glo.outFp[OFILE_IPPP]) outiPppHead(PPP_Glo.outFp[OFILE_IPPP], rtk);
+	// 输出PPP初始化文件头
+	if (PPP_Glo.outFp[OFILE_IPPP]) {
+		outiPppHead(PPP_Glo.outFp[OFILE_IPPP], rtk);
+	}
 
-	if (popt->soltype == 0) {       /* forward */
+	/* 4.设置前向/后向处理 */
+	if (popt->soltype == 0) {			/* forward */
 		PPP_Glo.revs = 0;
 		PPP_Glo.iObsu = 0;
 		PPP_Glo.iEpoch = 0;
 		procpos(&rtk, popt, sopt, 0);
 	}
-	else if (popt->soltype == 1) {  /* backward */
+	else if (popt->soltype == 1) {		/* backward */
 		PPP_Glo.revs = 1;
 		PPP_Glo.iObsu = obss.n - 1;
 		PPP_Glo.iEpoch = PPP_Glo.nEpoch;
 		procpos(&rtk, popt, sopt, 0);
 	}
-	else {   /* combined */
+	else {								/* combined 貌似没有双向? */
 		PPP_Glo.solf = (sol_t*)malloc(sizeof(sol_t) * PPP_Glo.nEpoch);
 		PPP_Glo.solb = (sol_t*)malloc(sizeof(sol_t) * PPP_Glo.nEpoch);
-		if (PPP_Glo.solf && PPP_Glo.solb) {
-		}
-		else
-			printf("error : memory allocation");
+		if (PPP_Glo.solf && PPP_Glo.solb) { ; }
+		else { printf("error : memory allocation"); }
 
 		free(PPP_Glo.solf); PPP_Glo.solf = NULL;
 		free(PPP_Glo.solb); PPP_Glo.solb = NULL;
