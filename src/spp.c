@@ -712,21 +712,26 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 {
 	/* 局部变量定义 ========================================================= */
 	prcopt_t opt_ = *opt;				// 处理选项
-	double* rs, * dts, * var, * azel_, * resp;
-	int i, sat, stat, vsat[MAXOBS] = { 0 }, svh[MAXOBS];
+	double* rs, * dts, * var;			// 卫星位置，速度/卫星钟差/卫星方差
+	double* azel_, * resp;				// 仰角，方位角/残差
+	int i;								// 循环遍历变量
+	int sat, stat;						// 卫星号/状态标识符
+	int vsat[MAXOBS] = { 0 };			// 卫星状态标记
+	int svh[MAXOBS];					// 卫星健康状态标记
 	/* ====================================================================== */
 
 	sol->stat = SOLQ_NONE;
 
 	if (n <= 0) { strcpy(msg, "no observation data"); return 0; }
 
+	// 初始化矩阵
 	rs = mat(6, n); dts = mat(2, n); var = mat(1, n); azel_ = zeros(2, n); resp = mat(1, n);
 
-	opt_.sateph = EPHOPT_BRDC;
+	opt_.sateph  = EPHOPT_BRDC;
 	opt_.ionoopt = IONOOPT_BRDC;
 	opt_.tropopt = TROPOPT_SAAS;
 
-	/* satellite positons, velocities and clocks */
+	/* 1.satellite positons, velocities and clocks 计算卫星位置、速度、钟差 */
 	satposs_rtklib(obs[0].time, obs, n, nav, opt_.sateph, rs, dts, var, svh);
 
 	/* estimate receiver position with pseudorange */
