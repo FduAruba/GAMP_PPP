@@ -76,8 +76,7 @@ extern double eph2clk(gtime_t time, const eph_t* eph)
 *          satellite clock includes relativity correction without code bias
 *          (tgd or bgd)
 *-----------------------------------------------------------------------------*/
-extern void eph2pos(gtime_t time, const eph_t* eph, double* rs, double* dts,
-	double* var)
+extern void eph2pos(gtime_t time, const eph_t* eph, double* rs, double* dts, double* var)
 {
 	double tk, M, E, Ek, sinE, cosE, u, r, i, O, sin2u, cos2u, x, y, sinO, cosO, cosi, mu, omge;
 	double xg, yg, zg, sino, coso;
@@ -90,9 +89,9 @@ extern void eph2pos(gtime_t time, const eph_t* eph, double* rs, double* dts,
 	tk = timediff(time, eph->toe);
 
 	switch ((sys = satsys(eph->sat, &prn))) {
-	case SYS_GAL: mu = MU_GAL; omge = OMGE_GAL; break;
-	case SYS_CMP: mu = MU_CMP; omge = OMGE_CMP; break;
-	default:      mu = MU_GPS; omge = OMGE;     break;
+	case SYS_GAL: {mu = MU_GAL; omge = OMGE_GAL; break; }
+	case SYS_CMP: {mu = MU_CMP; omge = OMGE_CMP; break; }
+	default:	  {mu = MU_GPS; omge = OMGE;     break; }
 	}
 	M = eph->M0 + (sqrt(mu / (eph->A * eph->A * eph->A)) + eph->deln) * tk;
 
@@ -227,27 +226,29 @@ extern void geph2pos(gtime_t time, const geph_t* geph, double* rs, double* dts,
 /* select ephememeris --------------------------------------------------------*/
 static eph_t* seleph(gtime_t time, int sat, int iode, const nav_t* nav)
 {
-	double t, tmax, tmin;
-	int i, j = -1;
+	/* 局部变量定义 ========================================================= */
+	double t, tmax, tmin;			// 时间变量/最小时间/最大时间
+	int i, j = -1;					// 循环遍历变量
+	/* ====================================================================== */
 
-	switch (satsys(sat, NULL)) {
-	case SYS_QZS: tmax = MAXDTOE_QZS + 1.0; break;
-	case SYS_GAL: tmax = MAXDTOE_GAL + 1.0; break;
-	case SYS_CMP: tmax = MAXDTOE_CMP + 1.0; break;
-	default: tmax = MAXDTOE + 1.0; break;
+	switch (satsys(sat, NULL))
+	{
+	case SYS_QZS: {tmax = MAXDTOE_QZS + 1.0; break; }
+	case SYS_GAL: {tmax = MAXDTOE_GAL + 1.0; break; }
+	case SYS_CMP: {tmax = MAXDTOE_CMP + 1.0; break; }
+	default:	  {tmax = MAXDTOE + 1.0; break; }
 	}
 	tmin = tmax + 1.0;
 
-	for (i = 0; i < nav->n; i++) {
-		if (nav->eph[i].sat != sat) continue;
-		if (iode >= 0 && nav->eph[i].iode != iode) continue;
-		if ((t = fabs(timediff(nav->eph[i].toe, time))) > tmax) continue;
-		if (iode >= 0) return nav->eph + i;
+	for (i = 0; i < nav->n; i++) {	// i遍历nav中各个星历
+		if (nav->eph[i].sat != sat) { continue; }
+		if (iode >= 0 && nav->eph[i].iode != iode) { continue; }
+		if ((t = fabs(timediff(nav->eph[i].toe, time))) > tmax) { continue; }
+		if (iode >= 0) { return nav->eph + i; }
 		if (t <= tmin) { j = i; tmin = t; } /* toe closest to time */
 	}
 	if (iode >= 0 || j < 0) {
-		sprintf(PPP_Glo.chMsg, "*** ERROR: no broadcast ephemeris: %s sat=%2d iode=%3d\n", time_str(time, 0),
-			sat, iode);
+		sprintf(PPP_Glo.chMsg, "*** ERROR: no broadcast ephemeris: %s sat=%2d iode=%3d\n", time_str(time, 0), sat, iode);
 		outDebug(0, OUTFIL, 0);
 		return NULL;
 	}
@@ -275,42 +276,44 @@ static geph_t* selgeph(gtime_t time, int sat, int iode, const nav_t* nav)
 	return nav->geph + j;
 }
 /* satellite clock with broadcast ephemeris ----------------------------------*/
-static int ephclk(gtime_t time, gtime_t teph, int sat, const nav_t* nav,
-	double* dts)
+static int ephclk(gtime_t time, gtime_t teph, int sat, const nav_t* nav, double* dts)
 {
-	eph_t* eph;
-	geph_t* geph;
-	int sys;
+	/* 局部变量定义 ========================================================= */
+	eph_t* eph;					// 星历变量
+	geph_t* geph;				// GLONASS星历变量
+	int sys;					// 卫星系统
+	/* ====================================================================== */
 
 	sys = satsys(sat, NULL);
 
 	if (sys == SYS_GPS || sys == SYS_GAL || sys == SYS_QZS || sys == SYS_CMP) {
-		if (!(eph = seleph(teph, sat, -1, nav))) return 0;
+		if (!(eph = seleph(teph, sat, -1, nav))) { return 0; }
 		*dts = eph2clk(time, eph);
 	}
 	else if (sys == SYS_GLO) {
-		if (!(geph = selgeph(teph, sat, -1, nav))) return 0;
+		if (!(geph = selgeph(teph, sat, -1, nav))) { return 0; }
 		*dts = geph2clk(time, geph);
 	}
-	else return 0;
+	else { return 0; }
 
 	return 1;
 }
 /* satellite position and clock by broadcast ephemeris -----------------------*/
-static int ephpos(gtime_t time, gtime_t teph, int sat, const nav_t* nav,
-	int iode, double* rs, double* dts, double* var, int* svh)
+static int ephpos(gtime_t time, gtime_t teph, int sat, const nav_t* nav, int iode, double* rs, double* dts, double* var, int* svh)
 {
-	eph_t* eph;
-	geph_t* geph;
-	double rst[3], dtst[1], tt = 1E-3;
-	int i, sys;
+	/* 局部变量定义 ========================================================= */
+	eph_t* eph;							// 星历变量
+	geph_t* geph;						// GLONASS星历变量
+	double rst[3], dtst[1], tt = 1E-3;	// 
+	int i, sys;							// 循环遍历遍历/卫星系统
+	/* ===================================================================== */
 
 	sys = satsys(sat, NULL);
 
 	*svh = -1;
 
 	if (sys == SYS_GPS || sys == SYS_GAL || sys == SYS_QZS || sys == SYS_CMP) {
-		if (!(eph = seleph(teph, sat, iode, nav))) return 0;
+		if (!(eph = seleph(teph, sat, iode, nav))) { return 0; }
 		eph2pos(time, eph, rs, dts, var);
 		time = timeadd(time, tt);
 		eph2pos(time, eph, rst, dtst, var);
@@ -323,10 +326,10 @@ static int ephpos(gtime_t time, gtime_t teph, int sat, const nav_t* nav,
 		geph2pos(time, geph, rst, dtst, var);
 		*svh = geph->svh;
 	}
-	else return 0;
+	else { return 0; }
 
 	/* satellite velocity and clock drift by differential approx */
-	for (i = 0; i < 3; i++) rs[i + 3] = (rst[i] - rs[i]) / tt;
+	for (i = 0; i < 3; i++) { rs[i + 3] = (rst[i] - rs[i]) / tt; }
 	dts[1] = (dtst[0] - dts[0]) / tt;
 
 	return 1;
@@ -347,16 +350,19 @@ static int ephpos(gtime_t time, gtime_t teph, int sat, const nav_t* nav,
 * notes  : satellite position is referenced to antenna phase center
 *          satellite clock does not include code bias correction (tgd or bgd)
 *-----------------------------------------------------------------------------*/
-extern int satpos(gtime_t time, gtime_t teph, int sat, int ephopt,
-	const nav_t* nav, double* rs, double* dts, double* var,
-	int* svh)
+extern int satpos(gtime_t time, gtime_t teph, int sat, int ephopt, const nav_t* nav, double* rs, double* dts, double* var, int* svh)
 {
 	*svh = 0;
 
-	switch (ephopt) {
-	case EPHOPT_BRDC: return ephpos(time, teph, sat, nav, -1, rs, dts, var, svh);
-	case EPHOPT_PREC:
-		if (!peph2pos(time, sat, nav, 1, rs, dts, var)) break; else return 1;
+	switch (ephopt) 
+	{
+	case EPHOPT_BRDC: {return ephpos(time, teph, sat, nav, -1, rs, dts, var, svh); }
+	case EPHOPT_PREC: {
+		if (!peph2pos(time, sat, nav, 1, rs, dts, var)) {
+			break;
+		}
+		else { return 1; }
+	}
 	}
 	*svh = -1;
 	return 0;
@@ -389,44 +395,42 @@ extern void satposs_rtklib(gtime_t teph, const obsd_t* obs, int n, const nav_t* 
 {
 	/* 局部变量定义 ========================================================= */
 	gtime_t time[MAXOBS] = { {0} };			// GPS时间变量
-	double dt, pr;							// /伪距变量
+	double dt, pr;							// 卫星钟差变量/伪距变量
 	int i, j;								// 循环遍历变量
 	/* ====================================================================== */
 
-	for (i = 0; i < n && i < 2 * MAXOBS; i++) {
+	for (i = 0; i < n && i < 2 * MAXOBS; i++) {		// i遍历当前历元obs
+		/* 初始化置零 */
 		for (j = 0; j < 6; j++) { rs [j + i * 6] = 0.0; }
 		for (j = 0; j < 2; j++) { dts[j + i * 2] = 0.0; }
 		var[i] = 0.0; svh[i] = 0;
 
-		/* search any psuedorange */
-		for (j = 0, pr = 0.0; j < NFREQ; j++) { 
-			if ((pr = obs[i].P[j]) != 0.0) {
-				break;
-			}
+		/* search any psuedorange 查找3频内是至少有一个伪距非0 */
+		for (j = 0, pr = 0.0; j < NFREQ; j++) {		// j遍历3频
+			if ((pr = obs[i].P[j]) != 0.0) { break; }
 		}
 
+		/* 如果当前obs伪距全为0，输出错误 */
 		if (j >= NFREQ) {
 			sprintf(PPP_Glo.chMsg, "*** WARNING: no pseudorange %s sat=%2d\n", time_str(obs[i].time, 3), obs[i].sat);
 			outDebug(OUTWIN, OUTFIL, 0);
 			continue;
 		}
-		/* transmission time by satellite clock */
+
+		/* transmission time by satellite clock 计算卫星发送信号时间(接收时间time-伪距/光速) */
 		time[i] = timeadd(obs[i].time, -pr / CLIGHT);
 
-		/* satellite clock bias by broadcast ephemeris */
+		/* satellite clock bias by broadcast ephemeris 从星历获取卫星钟差 */
 		if (!ephclk(time[i], teph, obs[i].sat, nav, &dt)) {
-			sprintf(PPP_Glo.chMsg, "*** WARNING: no broadcast clock %s sat=%2d\n",
-				time_str(time[i], 3), obs[i].sat);
+			sprintf(PPP_Glo.chMsg, "*** WARNING: no broadcast clock %s sat=%2d\n", time_str(time[i], 3), obs[i].sat);
 			outDebug(0, OUTFIL, 0);
 			continue;
 		}
 		time[i] = timeadd(time[i], -dt);
 
-		/* satellite position and clock at transmission time */
-		if (!satpos(time[i], teph, obs[i].sat, ephopt, nav, rs + i * 6, dts + i * 2, var + i,
-			svh + i)) {
-			sprintf(PPP_Glo.chMsg, "*** WARNING: no ephemeris %s sat=%2d\n",
-				time_str(time[i], 3), obs[i].sat);
+		/* satellite position and clock at transmission time 计算卫星位置/钟差 */
+		if (!satpos(time[i], teph, obs[i].sat, ephopt, nav, rs + i * 6, dts + i * 2, var + i, svh + i)) {
+			sprintf(PPP_Glo.chMsg, "*** WARNING: no ephemeris %s sat=%2d\n", time_str(time[i], 3), obs[i].sat);
 			outDebug(0, 0, 0);
 			continue;
 		}

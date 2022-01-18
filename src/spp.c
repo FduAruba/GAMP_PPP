@@ -354,19 +354,21 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 	const double* vare, const int* svh, const nav_t* nav, const double* x, const prcopt_t* opt,
 	double* v, double* H, double* var, double* azel, int* vsat, double* resp, int* nx, int* bDeleted)
 {
+	/* 局部变量定义 ========================================================= */
 	int bObserved[5];
 	int i, j, nv = 0, ns[5] = { 0 }, sys, satsn[MAXOBS], sat;
 	double r, dion, dtrp, vion, vtrp, rr[3], pos[3], dtr, e[3], P, elev_t[MAXSAT], vmeas, lam_L1;
 	double elmin;
 	int bMulGNSS;
+	/* ====================================================================== */
 
 	*nx = NX_SPP;
 
 	for (i = 0; i < 5; i++) { bObserved[i] = 0; ns[i] = 0; }
-	for (i = 0; i < n; i++)            v[i] = var[i] = 0.0;
-	for (i = 0; i < NX_SPP * (n + 5); i++) H[i] = 0.0;
-	for (i = 0; i < MAXSAT; i++)       elev_t[i] = 0.0;
-	for (i = 0; i < 3; i++)            rr[i] = x[i]; dtr = x[3];
+	for (i = 0; i < n; i++) { v[i] = var[i] = 0.0; }
+	for (i = 0; i < NX_SPP * (n + 5); i++) { H[i] = 0.0; }
+	for (i = 0; i < MAXSAT; i++) { elev_t[i] = 0.0; }
+	for (i = 0; i < 3; i++) { rr[i] = x[i]; dtr = x[3]; }
 
 	ecef2pos(rr, pos);
 
@@ -377,19 +379,18 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 
 		sys = PPP_Glo.sFlag[sat - 1].sys;
 
-		if (bDeleted[sat - 1] == 0) continue;
-		if (!(sys & opt->navsys)) continue;
+		if (bDeleted[sat - 1] == 0) { continue; }
+		if (!(sys & opt->navsys)) { continue; }
 
 		/* reject duplicated observation data */
 		if (i < n - 1 && i < MAXOBS - 1 && obs[i].sat == obs[i + 1].sat) {
-			sprintf(PPP_Glo.chMsg, "*** WARNING: duplicated observation data %s sat=%2d\n",
-				time_str(obs[i].time, 3), obs[i].sat);
+			sprintf(PPP_Glo.chMsg, "*** WARNING: duplicated observation data %s sat=%2d\n", time_str(obs[i].time, 3), obs[i].sat);
 			outDebug(OUTWIN, OUTFIL, 0);
 			i++;
 			continue;
 		}
 		/* geometric distance/azimuth/elevation angle */
-		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0) continue;
+		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0) { continue; }
 		satazel(pos, e, azel + i * 2);
 
 		if (bElevCVG) {
@@ -543,17 +544,25 @@ static int valsol(const double* azel, const int* vsat, int n,
 static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const double* rs, const double* dts, const double* vare,
 	const int* svh, const nav_t* nav, const prcopt_t* opt, sol_t* sol, double* azel, int* vsat, double* resp, char* msg)
 {
-	int i, j, k, info, stat = 0, nx, nv, bElevCVG;
-	double dx[NX_SPP], Q[NX_SPP * NX_SPP], dop[4], * v, * H, * var, sig, d0;
+	/* 局部变量定义 ========================================================= */
+	int i, j, k;					// 循环遍历结构体
+	int info, stat = 0;				// lsq标记符/状态标记符
+	int nx, nv, bElevCVG;			// 未知量个数/残差个数/仰角标记
+	double dx[NX_SPP];				// 未知量向量
+	double Q[NX_SPP * NX_SPP];		// 未知量协方差
+	double dop[4];					// 精度因子
+	double *v, * H, * var, sig, d0;	// 残差向量/系数阵/协方差//
+	/* ====================================================================== */
 
 	bElevCVG = 0;
 
+	// 初始化残差/系数阵/协方差
 	v = mat(n + 5, 1); H = mat(NX_SPP, n + 5); var = mat(n + 5, 1);
 
-	for (i = 0; i < NX_SPP; i++) dx[i] = 0.0;
+	for (i = 0; i < NX_SPP; i++) { dx[i] = 0.0; }
 
 	for (i = 0; i < MAXITR; i++) {
-		/* pseudorange residuals */
+		/* 1.pseudorange residuals 计算伪距残差 */
 		nv = rescode(i, bElevCVG, obs, n, rs, dts, vare, svh, nav, x, opt, v, H, var, azel, vsat, resp, &nx, bDeleted);
 
 		if (nv < nx) {
@@ -622,33 +631,38 @@ static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const dou
 static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* dts, const double* vare, const int* svh,
 	const nav_t* nav, const prcopt_t* opt, sol_t* sol, double* azel, int* vsat, double* resp, char* msg)
 {
-	int bDeleted[MAXSAT];
-	int i, j, stat = 0, n, nb = 0, * it, nMin = 4;
-	double x[NX_SPP] = { 0 }, x_[NX_SPP], dt = 0.0;
+	/* 局部变量定义 ========================================================= */
+	int bDeleted[MAXSAT];					// 卫星剔除标记(1:保留 0:剔除)
+	int i, j;								// 循环遍历变量
+	int stat = 0, n, nb = 0;				// 状态标记符/？/？
+	int* it, nMin = 4;						// ？/最小卫星数
+	double x[NX_SPP] = { 0 }, x_[NX_SPP];	// 未知量向量
+	double dt = 0.0;						// 时间差
+	/* ====================================================================== */
 
-	for (i = 0; i < NX_SPP; i++) x[i] = x_[i] = 1.0;
-	//for (i=0;i<MAXSAT;i++) bDeleted[i]=true;
+	for (i = 0; i < NX_SPP; i++) { x[i] = x_[i] = 1.0; }
 
-	if (PPP_Glo.crdTrue[0] == 0.0) {
+	if (PPP_Glo.crdTrue[0] == 0.0) {	// 如果有没真值，先计算时间差，再赋值
 		dt = fabs(timediff(PPP_Glo.tNow, sol->time));
 		PPP_Glo.delEp = myRound(dt / PPP_Glo.sample);
 
 		if (dt > 1800 && PPP_Glo.delEp > 100) {
-			for (i = 0; i < 3; i++) x[i] = 100.0;
+			for (i = 0; i < 3; i++) { x[i] = 100.0; }
 		}
 		else {
-			for (i = 0; i < 3; i++) x[i] = sol->rr[i];
-			if (norm(x, 3) <= 10)
-				for (i = 0; i < 3; i++) x[i] = 100.0;
+			for (i = 0; i < 3; i++) { x[i] = sol->rr[i]; }
+			if (norm(x, 3) <= 10) {
+				for (i = 0; i < 3; i++) { x[i] = 100.0; }
+			}
 		}
 	}
-	else {
-		for (i = 0; i < 3; i++) x[i] = PPP_Glo.crdTrue[i];
+	else {	// 如果有真值，则直接给x[]赋值		
+		for (i = 0; i < 3; i++) { x[i] = PPP_Glo.crdTrue[i]; }
 	}
 
 	sol->time = obs[0].time;
 
-	for (i = 0; i < NX_SPP; i++) x_[i] = x[i];
+	for (i = 0; i < NX_SPP; i++) { x_[i] = x[i]; }
 
 	for (nb = 0; nb <= 3; nb++) {
 		if (nobs - nb < nMin) {
@@ -656,11 +670,12 @@ static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* d
 			break;
 		}
 
-		for (i = 0, n = 1; i < nb; i++)
+		for (i = 0, n = 1; i < nb; i++) {
 			n = n * (nobs - i) / (i + 1);
+		}
 
-		if (nb <= 0) it = imat(n, 1);
-		else       it = imat(n * nb, 1);
+		if (nb <= 0) { it = imat(n, 1); }
+		else		 { it = imat(n * nb, 1); }
 
 		comb_j = 0;
 
@@ -668,9 +683,9 @@ static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* d
 		//////////////////////////////////////////////////////////////////////////
 
 		for (i = stat = 0; i < n; i++) {
-			for (j = 0; j < nobs; j++) bDeleted[obs[j].sat - 1] = 1;
-			for (j = i * nb; j < i * nb + nb; j++) bDeleted[obs[it[j] - 1].sat - 1] = 0;
-			for (j = 0; j < NX_SPP; j++) x_[j] = x[j];
+			for (j = 0; j < nobs; j++) { bDeleted[obs[j].sat - 1] = 1; }
+			for (j = i * nb; j < i * nb + nb; j++) { bDeleted[obs[it[j] - 1].sat - 1] = 0; }
+			for (j = 0; j < NX_SPP; j++) { x_[j] = x[j]; }
 
 			stat = estpos_(bDeleted, x_, obs, nobs, rs, dts, vare, svh, nav, opt, sol, azel, vsat, resp, msg);
 
@@ -683,11 +698,10 @@ static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* d
 	}
 
 	if (stat == 1) {
-		for (j = 0; j < NX_SPP; j++) x[j] = x_[j];
+		for (j = 0; j < NX_SPP; j++) { x[j] = x_[j]; }
 		return 1;
 	}
-	else
-		return 0;
+	else { return 0; }
 }
 static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* dts, const double* vare, const int* svh, const nav_t* nav, const prcopt_t* opt, sol_t* sol, double* azel, int* vsat, double* resp, char* msg);
 //static int estpos(const obsd_t *obs, int n, const double *rs, const double *dts, const double *vare, const nav_t *nav, const prcopt_t *opt, sol_t *sol, double *azel, int *vsat, double *resp, char *msg);
@@ -734,10 +748,10 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 	/* 1.satellite positons, velocities and clocks 计算卫星位置、速度、钟差 */
 	satposs_rtklib(obs[0].time, obs, n, nav, opt_.sateph, rs, dts, var, svh);
 
-	/* estimate receiver position with pseudorange */
+	/* 2.estimate receiver position with pseudorange 通过伪距估计接收机位置 */
 	stat = estpos(obs, n, rs, dts, var, svh, nav, &opt_, sol, azel_, vsat, resp, msg);
 
-	opt_.sateph = EPHOPT_BRDC;
+	opt_.sateph  = EPHOPT_BRDC;
 	opt_.ionoopt = IONOOPT_BRDC;
 	opt_.tropopt = TROPOPT_SAAS;
 
@@ -763,7 +777,7 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 			ssat[sat - 1].resp_pos[0] = resp[i];
 			ssat[sat - 1].snr[0] = obs[i].SNR[0];
 
-			if (PPP_Glo.sFlag[sat - 1].sys == SYS_GPS) sol->ns[0]++;
+			if		(PPP_Glo.sFlag[sat - 1].sys == SYS_GPS) sol->ns[0]++;
 			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GLO) sol->ns[1]++;
 			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_CMP) sol->ns[2]++;
 			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GAL) sol->ns[3]++;

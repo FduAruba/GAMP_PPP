@@ -431,8 +431,7 @@ static void posWithEarhRotation(const int k, double pos[3], double p[3][NMAX + 1
 	p[2][k] = pos[2];
 }
 /* satellite position by precise ephemeris -----------------------------------*/
-static int pephpos(gtime_t time, int sat, const nav_t* nav, double* rs,
-	double* dts, double* vare, double* varc)
+static int pephpos(gtime_t time, int sat, const nav_t* nav, double* rs, double* dts, double* vare, double* varc)
 {
 	double t[NMAX + 1], p[3][NMAX + 1], c[2], * pos, std = 0.0, s[3], sinl;
 	int i, j, k, index, sys;
@@ -440,33 +439,34 @@ static int pephpos(gtime_t time, int sat, const nav_t* nav, double* rs,
 
 	rs[0] = rs[1] = rs[2] = dts[0] = 0.0;
 
-	if (nav->ne < NMAX + 1 || timediff(time, nav->peph[0].time) < -MAXDTE ||
-		timediff(time, nav->peph[nav->ne - 1].time) > MAXDTE)
+	if (nav->ne < NMAX + 1 || timediff(time, nav->peph[0].time) < -MAXDTE || timediff(time, nav->peph[nav->ne - 1].time) > MAXDTE) {
 		return 0;
+	}
 
 	/* binary search */
 	for (i = 0, j = nav->ne - 1; i < j;) {
 		k = (i + j) / 2;
-		if (timediff(nav->peph[k].time, time) < 0.0) i = k + 1; else j = k;
+		if (timediff(nav->peph[k].time, time) < 0.0) { i = k + 1; }
+		else { j = k; }
 	}
 	index = i <= 0 ? 0 : i - 1;
 
 	/* polynomial interpolation for orbit */
 	i = index - (NMAX + 1) / 2;
-	if (i < 0) i = 0;
-	else if (i + NMAX >= nav->ne) i = nav->ne - NMAX - 1;
+	if (i < 0) { i = 0; }
+	else if (i + NMAX >= nav->ne) { i = nav->ne - NMAX - 1; }
 
 	for (j = k = 0; j < NMAX * 50; j++) {
 		if (index + j >= 0 && index + j < nav->ne && k <= NMAX) {
 			id[k] = index + j;
-			t[k] = timediff(nav->peph[id[k]].time, time);
-			pos = nav->peph[id[k]].pos[sat - 1];
+			t[k]  = timediff(nav->peph[id[k]].time, time);
+			pos   = nav->peph[id[k]].pos[sat - 1];
 			if (norm(pos, 3) > 0.0) {
 				posWithEarhRotation(k, pos, p, t[k]);
 				k++;
 			}
 		}
-		if (k == NMAX + 1) break;
+		if (k == NMAX + 1) { break; }
 
 		if (index - j >= 0 && index - j < nav->ne && k <= NMAX && j != 0) {
 			id[k] = index - j;
@@ -479,7 +479,7 @@ static int pephpos(gtime_t time, int sat, const nav_t* nav, double* rs,
 		}
 		if (k == NMAX + 1) break;
 	}
-	if (k <= NMAX) return 0;
+	if (k <= NMAX) { return 0; }
 
 	for (i = 0; i <= NMAX; i++) {
 		for (j = i + 1; j <= NMAX; j++) {
@@ -701,21 +701,22 @@ extern void satantoff(gtime_t time, const double* rs, int sat, const nav_t* nav,
 *          nav->nc must be set by calling readsp3(), readrnx() or readrnxt()
 *          if precise clocks are not set, clocks in sp3 are used instead
 *-----------------------------------------------------------------------------*/
-extern int peph2pos(gtime_t time, int sat, const nav_t* nav, int opt,
-	double* rs, double* dts, double* var)
+extern int peph2pos(gtime_t time, int sat, const nav_t* nav, int opt, double* rs, double* dts, double* var)
 {
 	double rss[3], rst[3], dtss[1], dtst[1], dant[3] = { 0 }, vare = 0.0, varc = 0.0, tt = 1E-3;
 	int i;
 
-	if (sat <= 0 || MAXSAT < sat) return 0;
+	if (sat <= 0 || MAXSAT < sat) { return 0; }
 
 	/* satellite position and clock bias */
-	if (!pephpos(time, sat, nav, rss, dtss, &vare, &varc) ||
-		!pephclk(time, sat, nav, dtss, &varc)) return 0;
+	if (!pephpos(time, sat, nav, rss, dtss, &vare, &varc) || !pephclk(time, sat, nav, dtss, &varc)) {
+		return 0;
+	}
 
 	time = timeadd(time, tt);
-	if (!pephpos(time, sat, nav, rst, dtst, NULL, NULL) ||
-		!pephclk(time, sat, nav, dtst, NULL)) return 0;
+	if (!pephpos(time, sat, nav, rst, dtst, NULL, NULL) || !pephclk(time, sat, nav, dtst, NULL)) { 
+		return 0;
+	}
 
 	/* satellite antenna offset correction */
 	if (opt) {
