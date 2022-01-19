@@ -482,13 +482,12 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 	nv = getHVR_spp(bMulGNSS, iter, opt->navsys, bElevCVG, bDeleted, satsn, H, v, var, elev_t, nv, *nx);
 
 	for (i = 0; i < 5; i++) {
-		if (ns[i] > 0) continue;
-		for (j = 0; j < nv; j++)
-			H[(3 + i) + j * (*nx)] = 0.0;
+		if (ns[i] > 0) { continue; }
+		for (j = 0; j < nv; j++) { H[(3 + i) + j * (*nx)] = 0.0; }
 	}
 	 
 	for (i = 0; i < 5; i++) {
-		if (ns[i] == 0) *nx = *nx - 1;
+		if (ns[i] == 0) { *nx = *nx - 1; }
 	}
 
 	//*nx=*nx-1;
