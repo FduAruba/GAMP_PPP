@@ -67,8 +67,8 @@ static double prange(const obsd_t* obs, const nav_t* nav, const double* azel,
 	if (NFREQ < 2 || lam[i] == 0.0 || lam[j] == 0.0) return 0.0;
 
 	gamma = SQR(lam[j]) / SQR(lam[i]); /* f1^2/f2^2 */
-	P1 = obs->P[i];
-	P2 = obs->P[j];
+	P1	  = obs->P[i];
+	P2	  = obs->P[j];
 	P1_P2 = nav->cbias[obs->sat - 1][0];
 	P1_C1 = nav->cbias[obs->sat - 1][1];
 	P2_C2 = nav->cbias[obs->sat - 1][2];
@@ -103,25 +103,24 @@ static double prange(const obsd_t* obs, const nav_t* nav, const double* azel,
 }
 
 /* ionospheric correction ----------------------------------------------------*/
-static int ionocorr(gtime_t time, const int sys, const nav_t* nav, const double* pos,
-	const double* azel, const prcopt_t* opt, double* ion,
-	double* var)
+static int ionocorr(gtime_t time, const int sys, const nav_t* nav, const double* pos, const double* azel, const prcopt_t* opt, double* ion, double* var)
 {
-	/* broadcast model */
+	/* 1.broadcast model 广播模型 */
 	if (opt->ionoopt == IONOOPT_BRDC) {
-		//*ion=ionmodel(time,nav->ion_gps,pos,azel);
-
-		if (sys == SYS_GPS) *ion = ionmodel(time, nav->ion_gps, pos, azel);
-		//else if ( SYS_CMP==sys )  *ion=ionmodel(time,nav->ion_cmp,pos,azel);
-		else *ion = ionmodel(time, nav->ion_gps, pos, azel);
-
+		if (sys == SYS_GPS) { 
+			*ion = ionmodel(time, nav->ion_gps, pos, azel); 
+		}
+		else {
+			*ion = ionmodel(time, nav->ion_gps, pos, azel);
+		}
 		*var = SQR(*ion * ERR_BRDCI);
 		return 1;
 	}
-	/* ionex tec model */
+	/* 2.ionex tec model TEC模型 */
 	else if (opt->ionoopt == IONOOPT_TEC) {
 		return iontec(time, nav, pos, azel, 3, ion, var);
 	}
+	/* 3.IF model 无电离层模型 */
 	else if (opt->ionoopt == IONOOPT_IF12) {
 		*ion = 0.0;
 		*var = SQR(0.02);
@@ -133,12 +132,12 @@ static int ionocorr(gtime_t time, const int sys, const nav_t* nav, const double*
 	return 1;
 }
 /* tropospheric correction ---------------------------------------------------*/
-static int tropcorr(gtime_t time, const nav_t* nav, const double* pos,
-	const double* azel, const prcopt_t* opt, double* trp,
-	double* var)
+static int tropcorr(gtime_t time, const nav_t* nav, const double* pos, const double* azel, const prcopt_t* opt, double* trp, double* var)
 {
-	double trpw = 0.0;
-	*trp = 0.0;
+	/* 局部变量定义 ========================================================= */
+	double trpw = 0.0;				// 电离层湿延迟(m)
+	*trp = 0.0;						// 对流层延迟(m)
+	/* 局部变量定义 ========================================================= */
 
 	/* saastamoinen model */
 	if (opt->tropopt == TROPOPT_SAAS || opt->tropopt == TROPOPT_EST) {
@@ -146,8 +145,8 @@ static int tropcorr(gtime_t time, const nav_t* nav, const double* pos,
 		*trp += trpw;
 		*var = SQR(ERR_SAAS);
 
-		if (*trp > 100.0) *trp = 100.0;
-		else if (*trp < 0.05) *trp = 0.05;
+		if		(*trp > 100.0) { *trp = 100.0; }
+		else if (*trp < 0.05)  { *trp = 0.05; }
 
 		return 1;
 	}
@@ -383,14 +382,14 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 		if (bDeleted[sat - 1] == 0) { continue; }
 		if (!(sys & opt->navsys)) { continue; }
 
-		/* reject duplicated observation data */
+		/* reject duplicated observation data 剔除重复obs数据 */
 		if (i < n - 1 && i < MAXOBS - 1 && obs[i].sat == obs[i + 1].sat) {
 			sprintf(PPP_Glo.chMsg, "*** WARNING: duplicated observation data %s sat=%2d\n", time_str(obs[i].time, 3), obs[i].sat);
 			outDebug(OUTWIN, OUTFIL, 0);
 			i++;
 			continue;
 		}
-		/* geometric distance/azimuth/elevation angle */
+		/* geometric distance/azimuth/elevation angle 计算几何距离/方位角/仰角 */
 		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0) { continue; }
 		satazel(pos, e, azel + i * 2);
 
@@ -414,34 +413,35 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 			}
 		}
 
-		/* psudorange with code bias correction */
+		/* psudorange with code bias correction 计算伪距，修正DCB */
 		if ((P = prange(obs + i, nav, azel + i * 2, opt, &vmeas)) == 0.0) { continue; }
 
-		/* excluded satellite */
-		if (satexclude(obs[i].sat, svh[i], opt)) continue;
+		/* excluded satellite 剔除不符合的卫星 */
+		if (satexclude(obs[i].sat, svh[i], opt)) { continue; }
 
-		/* ionospheric corrections */
-		if (!ionocorr(obs[i].time, sys, nav, pos, azel + i * 2, opt, &dion, &vion)) continue;
-		/* GPS-L1 -> L1/B1 */
+		/* ionospheric corrections 电离层校正 */
+		if (!ionocorr(obs[i].time, sys, nav, pos, azel + i * 2, opt, &dion, &vion)) { continue; }
+
+		/* GPS-L1 -> L1/B1  将GPS-L1电离层延迟转换成其他系统L1延迟 */
 		if ((lam_L1 = nav->lam[obs[i].sat - 1][0]) > 0.0) {
 			dion *= SQR(lam_L1 / lam_carr[0]);
 		}
 
-		/* tropospheric corrections */
-		if (!tropcorr(obs[i].time, nav, pos, azel + i * 2, opt, &dtrp, &vtrp)) continue;
+		/* tropospheric corrections 对流层校正 */
+		if (!tropcorr(obs[i].time, nav, pos, azel + i * 2, opt, &dtrp, &vtrp)) { continue; }
 
 		/* pseudorange residual */
 		v[nv] = resp[i] = P - (r + dtr - CLIGHT * dts[i * 2] + dion + dtrp);
 
 		/* design matrix */
-		for (j = 0; j < 4; j++) H[j + nv * NX_SPP] = j < 3 ? -e[j] : 1.0;
+		for (j = 0; j < 4; j++) { H[j + nv * NX_SPP] = j < 3 ? -e[j] : 1.0; }
 
 		/* time system and receiver bias offset */
-		if (sys == SYS_GLO) { v[nv] -= x[4];   H[4 + nv * NX_SPP] = 1.0; ns[1]++; bObserved[1] = 1; }
+		if		(sys == SYS_GLO) { v[nv] -= x[4];   H[4 + nv * NX_SPP] = 1.0; ns[1]++; bObserved[1] = 1; }
 		else if (sys == SYS_CMP) { v[nv] -= x[5];   H[5 + nv * NX_SPP] = 1.0; ns[2]++; bObserved[2] = 1; }
 		else if (sys == SYS_GAL) { v[nv] -= x[6];   H[6 + nv * NX_SPP] = 1.0; ns[3]++; bObserved[3] = 1; }
 		else if (sys == SYS_QZS) { v[nv] -= x[7];   H[7 + nv * NX_SPP] = 1.0; ns[4]++; bObserved[4] = 1; }
-		else { H[4 + nv * NX_SPP] = H[5 + nv * NX_SPP] = 0.0; ns[0]++; bObserved[0] = 1; }
+		else					 { H[4 + nv * NX_SPP] = H[5 + nv * NX_SPP] = 0.0; ns[0]++; bObserved[0] = 1; }
 
 		vsat[i] = 1; resp[i] = v[nv];
 
@@ -451,7 +451,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 		/* error variance */
 		var[nv] = varerr(opt, azel[1 + i * 2], sys) + vare[i] + vion + vtrp;
 
-		if (azel[1 + i * 2] < opt->elmin) var[nv] *= 100.0;
+		if (azel[1 + i * 2] < opt->elmin) { var[nv] *= 100.0; }
 
 		nv++;
 	}
@@ -461,7 +461,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 	}
 
 	bMulGNSS = 0;
-	if (j >= 2) bMulGNSS = 1;
+	if (j >= 2) { bMulGNSS = 1; }
 
 	i = nv;
 	nv = getHVR_spp(bMulGNSS, iter, opt->navsys, bElevCVG, bDeleted, satsn, H, v, var, elev_t, nv, *nx);
@@ -471,7 +471,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 		for (j = 0; j < nv; j++)
 			H[(3 + i) + j * (*nx)] = 0.0;
 	}
-
+	 
 	for (i = 0; i < 5; i++) {
 		if (ns[i] == 0) *nx = *nx - 1;
 	}

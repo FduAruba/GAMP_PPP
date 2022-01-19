@@ -3129,39 +3129,42 @@ extern void dops(int ns, const double* azel, double elmin, double* dop)
 *          double *azel     I   azimuth/elevation angle {az,el} (rad)
 * return : ionospheric delay (L1) (m)
 *-----------------------------------------------------------------------------*/
-extern double ionmodel(gtime_t t, const double* ion, const double* pos,
-	const double* azel)
+extern double ionmodel(gtime_t t, const double* ion, const double* pos, const double* azel)
 {
-	const double ion_default[] = { /* 2004/1/1 */
+	/* 局部变量定义 ========================================================= */
+	const double ion_default[] = { /* 2004/1/1 广播电离层默认参数(8个) */
 		0.1118E-07,-0.7451E-08,-0.5961E-07, 0.1192E-06,
 		0.1167E+06,-0.2294E+06,-0.1311E+06, 0.1049E+07
 	};
 	double tt, f, psi, phi, lam, amp, per, x;
 	int week;
+	/* ====================================================================== */
 
-	if (pos[2] < -1E3 || azel[1] <= 0) return 0.0;
-	if (norm(ion, 8) <= 0.0) ion = ion_default;
+	if (pos[2] < -1E3 || azel[1] <= 0) { return 0.0; }
+	if (norm(ion, 8) <= 0.0) { ion = ion_default; }
 
-	/* earth centered angle (semi-circle) */
+	/* 1.earth centered angle (semi-circle) */
 	psi = 0.0137 / (azel[1] / PI + 0.11) - 0.022;
 
-	/* subionospheric latitude/longitude (semi-circle) */
+	/* 2.subionospheric latitude/longitude (semi-circle) */
 	phi = pos[0] / PI + psi * cos(azel[0]);
-	if (phi > 0.416) phi = 0.416;
-	else if (phi < -0.416) phi = -0.416;
+	if		(phi > 0.416) { phi = 0.416; }
+	else if (phi < -0.416) { phi = -0.416; }
+
+	/* 3.wave length */
 	lam = pos[1] / PI + psi * sin(azel[0]) / cos(phi * PI);
 
-	/* geomagnetic latitude (semi-circle) */
+	/* 4.geomagnetic latitude (semi-circle) */
 	phi += 0.064 * cos((lam - 1.617) * PI);
 
-	/* local time (s) */
+	/* 5.local time (s) */
 	tt = 43200.0 * lam + time2gpst(t, &week);
 	tt -= floor(tt / 86400.0) * 86400.0; /* 0<=tt<86400 */
 
-	/* slant factor */
+	/* 6.slant factor */
 	f = 1.0 + 16.0 * pow(0.53 - azel[1] / PI, 3.0);
 
-	/* ionospheric delay */
+	/* 7.ionospheric delay */
 	amp = ion[0] + phi * (ion[1] + phi * (ion[2] + phi * ion[3]));
 	per = ion[4] + phi * (ion[5] + phi * (ion[6] + phi * ion[7]));
 	amp = amp < 0.0 ? 0.0 : amp;
@@ -3219,10 +3222,11 @@ extern double ionppp(const double* pos, const double* azel, double re,
 *          double *pos      I   receiver position {lat,lon,h} (rad,m)
 *          double *azel     I   azimuth/elevation angle {az,el} (rad)
 *          double humi      I   relative humidity
+*		   double *zwd		O   zenith wet delay
+*		   int atmodel      I   atmosphere model
 * return : tropospheric delay (m)
 *-----------------------------------------------------------------------------*/
-extern double tropmodel(gtime_t time, const double* pos, const double* azel,
-	double humi, double* zwd, int atmodel)
+extern double tropmodel(gtime_t time, const double* pos, const double* azel, double humi, double* zwd, int atmodel)
 {
 	const double temp0 = 15.0;   /* temparature at sea level */
 	double hgt, pres, temp, e, z, trph, trpw;
@@ -3231,11 +3235,11 @@ extern double tropmodel(gtime_t time, const double* pos, const double* azel,
 	double dmjd, undo, d1, d2;
 
 	if (pos[2] < -100.0 || pos[2]>1E6 || azel[1] <= 0) {
-		//解算开始的第一个历元高程总满足-100.0，不输出下面调试信息
+		// 解算开始的第一个历元高程总满足-100.0，不输出下面调试信息
 		b1 = (PPP_Glo.iEpoch == 1) && (PPP_Glo.revs == 0);
 		b2 = (PPP_Glo.nEpoch - 1 == PPP_Glo.iEpoch) && (PPP_Glo.revs == 1);
 
-		//增加deltaEp限制
+		// 增加deltaEp限制
 		if (!b1 && !b2 && PPP_Glo.delEp < 20) {
 			sprintf(PPP_Glo.chMsg, "*** WARNING: tropmodel: height=%7.3f elev=%4.1f\n", pos[2], azel[1] * R2D);
 			outDebug(OUTWIN, OUTFIL, OUTTIM);
@@ -3262,12 +3266,14 @@ extern double tropmodel(gtime_t time, const double* pos, const double* azel,
 		hgt = 15000.0;
 	}
 
-	/* standard atmosphere */
+	/* standard atmosphere 此处开始为rtk代码 */
+	// 1.saastamoninen model
 	if (atmodel != 1) {
 		pres = 1013.25 * pow(1.0 - 2.2557E-5 * hgt, 5.2568);
 		temp = temp0 - 6.5E-3 * hgt + 273.16;
 		e = 6.108 * humi * exp((17.15 * temp - 4684.0) / (temp - 38.45));
 	}
+	// 2.IERS model
 	else {
 		time2mjd(time, &mjd);
 		dmjd = mjd.day + (mjd.ds.sn + mjd.ds.tos) / 86400.0;
@@ -3284,12 +3290,12 @@ extern double tropmodel(gtime_t time, const double* pos, const double* azel,
 
 	/* saastamoninen model */
 	z = PI / 2.0 - azel[1];
-	trph = 0.0022768 * pres / (1.0 - 0.00266 * cos(2.0 * pos[0]) - 0.00028 * hgt / 1E3) / cos(z);
-	trpw = 0.002277 * (1255.0 / temp + 0.05) * e / cos(z);
+	trph = 0.0022768 * pres / (1.0 - 0.00266 * cos(2.0 * pos[0]) - 0.00028 * hgt / 1E3) / cos(z); // 干延迟
+	trpw = 0.002277 * (1255.0 / temp + 0.05) * e / cos(z);	// 湿延迟
 
 	*zwd = trpw;
 
-	return trph;
+	return trph;	// 只返回干延迟
 }
 static double interpc(const double coef[], double lat)
 {
