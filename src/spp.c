@@ -23,11 +23,19 @@ static double varerr(const prcopt_t* opt, double el, int sys)
 {
 	double fact, varr;
 
-	fact = sys == SYS_GLO ? PPP_Glo.prcOpt_Ex.errRatioGLO : (sys == SYS_CMP ? PPP_Glo.prcOpt_Ex.errRatioBDS :
-		(sys == SYS_GAL ? PPP_Glo.prcOpt_Ex.errRatioGAL : (sys == SYS_QZS ? PPP_Glo.prcOpt_Ex.errRatioQZS : opt->err[0])));
+	/*fact = sys == SYS_GLO ? PPP_Glo.prcOpt_Ex.errRatioGLO : (sys == SYS_CMP ? PPP_Glo.prcOpt_Ex.errRatioBDS :
+		(sys == SYS_GAL ? PPP_Glo.prcOpt_Ex.errRatioGAL : (sys == SYS_QZS ? PPP_Glo.prcOpt_Ex.errRatioQZS : opt->err[0])));*/
+
+	switch (sys) {
+	case SYS_GLO: {fact = PPP_Glo.prcOpt_Ex.errRatioGLO; break; }
+	case SYS_CMP: {fact = PPP_Glo.prcOpt_Ex.errRatioBDS; break; }
+	case SYS_GAL: {fact = PPP_Glo.prcOpt_Ex.errRatioGAL; break; }
+	case SYS_QZS: {fact = PPP_Glo.prcOpt_Ex.errRatioQZS; break; }
+	default:	  {fact = opt->err[0]; break; }
+	}
 	varr = (SQR(opt->err[1]) + SQR(opt->err[2]) / sin(el));
 
-	if (opt->ionoopt == IONOOPT_IF12) varr *= SQR(3.0); /* iono-free */
+	if (opt->ionoopt == IONOOPT_IF12) { varr *= SQR(3.0); } /* iono-free */
 	return SQR(fact) * varr;
 }
 /* get tgd parameter (m) -----------------------------------------------------*/
@@ -50,8 +58,7 @@ static double gettgd(int sat, const nav_t* nav, double* tgd1, double* tgd2)
 
 /* psendorange with code bias correction -------------------------------------*/
 //static double prange(const obsd_t *obs, const nav_t *nav, const prcopt_t *opt)
-static double prange(const obsd_t* obs, const nav_t* nav, const double* azel,
-	const prcopt_t* opt, double* var)
+static double prange(const obsd_t* obs, const nav_t* nav, const double* azel, const prcopt_t* opt, double* var)
 {
 	const double* lam = nav->lam[obs->sat - 1];
 	double PC, P1, P2, P1_P2, P1_C1, P2_C2, gamma, tgd1 = 0.0, tgd2 = 0.0;
@@ -353,34 +360,38 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 	const double* vare, const int* svh, const nav_t* nav, const double* x, const prcopt_t* opt,
 	double* v, double* H, double* var, double* azel, int* vsat, double* resp, int* nx, int* bDeleted)
 {
-	/* 局部变量定义 ========================================================= */
-	int bObserved[5];
-	int i, j;
-	int nv = 0, ns[5] = { 0 }, sys, satsn[MAXOBS], sat;
-	double r, dion, dtrp, vion, vtrp, rr[3], pos[3], dtr, e[3], P, elev_t[MAXSAT], vmeas, lam_L1;
-	double elmin;
-	int bMulGNSS;
-	/* ====================================================================== */
+	/* 局部变量定义 =============================================================================== */
+	int bObserved[5];					// 观测标记符(5系统)
+	int i, j;							// 循环遍历变量
+	int nv = 0, ns[5] = { 0 };			// 残差个数/卫星个数(5系统)
+	int sys, satsn[MAXOBS], sat;		// 卫星系统/卫星号[]/卫星号
+	double r, dtr, dion, dtrp;			// 几何距离/接收机钟差(GPS)/对流层延迟/电离层延迟
+	double vion, vtrp;					// 电离层方差/对流层方差
+	double rr[3], pos[3], e[3];			// 接收机坐标XYZ/BLH/单位向量
+	double P, elev_t[MAXSAT], vmeas;	// 伪距/仰角/残差方差
+	double lam_L1;						// L1波长
+	double elmin;						// 仰角截断值
+	int bMulGNSS;						// 多系统标记
+	/* ============================================================================================= */
 
 	*nx = NX_SPP;
 
+	/* 矩阵/向量初始化 */
 	for (i = 0; i < 5; i++) { bObserved[i] = 0; ns[i] = 0; }
 	for (i = 0; i < n; i++) { v[i] = var[i] = 0.0; }
 	for (i = 0; i < NX_SPP * (n + 5); i++) { H[i] = 0.0; }
 	for (i = 0; i < MAXSAT; i++) { elev_t[i] = 0.0; }
 	for (i = 0; i < 3; i++) { rr[i] = x[i]; dtr = x[3]; }
-
+	/* XYZ->BLH */
 	ecef2pos(rr, pos);
 
-	for (i = 0; i < n && i < MAXOBS; i++) {	// i遍历所有卫星
+	for (i = 0; i < n && i < MAXOBS; i++) {	// i遍历当前历元所有obs
 		sat = obs[i].sat;
-
-		vsat[i] = 0; azel[i * 2] = azel[1 + i * 2] = resp[i] = 0.0;
-
 		sys = PPP_Glo.sFlag[sat - 1].sys;
-
+		vsat[i] = 0; azel[i * 2] = azel[1 + i * 2] = resp[i] = 0.0;
+		
 		if (bDeleted[sat - 1] == 0) { continue; }
-		if (!(sys & opt->navsys)) { continue; }
+		if (!(sys & opt->navsys))   { continue; }
 
 		/* reject duplicated observation data 剔除重复obs数据 */
 		if (i < n - 1 && i < MAXOBS - 1 && obs[i].sat == obs[i + 1].sat) {
@@ -389,37 +400,42 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 			i++;
 			continue;
 		}
-		/* geometric distance/azimuth/elevation angle 计算几何距离/方位角/仰角 */
+
+		/* 1.geometric distance/azimuth/elevation angle 计算几何距离/方位角/仰角 */
 		if ((r = geodist(rs + i * 6, rr, e)) <= 0.0) { continue; }
 		satazel(pos, e, azel + i * 2);
 
+		/* 2.by Zhoufeng 仰角筛选策略 */
 		if (bElevCVG) {
+			/* [1]:拓展仰角，采用很小的仰角作为截断值 */
 			if (PPP_Glo.prcOpt_Ex.bElevCheckEx) {
 				elmin = 0.0;
 				elmin = MIN(opt->elmin, 2.0 * D2R);
 				elmin = MAX(opt->elmin / 3.0, elmin);
-				if (azel[1 + i * 2] < elmin) continue;
+				if (azel[1 + i * 2] < elmin) { continue; }
 			}
+			/* [2]:采用设定截断值 */
 			else {
-				if (azel[1 + i * 2] < opt->elmin) continue;
+				if (azel[1 + i * 2] < opt->elmin) { continue; }
 			}
 		}
 		else {
-			if (azel[1 + i * 2] <= 0.0)
+			/* [3]:采用很小的仰角作为截断值 */
+			if (azel[1 + i * 2] <= 0.0) {
 				azel[1 + i * 2] = MIN(3.0 * D2R, opt->elmin * 0.75);
-
+			}
 			if (iter >= 1) {
-				if (azel[1 + i * 2] < opt->elmin) continue;
+				if (azel[1 + i * 2] < opt->elmin) { continue; }
 			}
 		}
 
-		/* psudorange with code bias correction 计算伪距，修正DCB */
+		/* 3.psudorange with code bias correction 计算伪距，修正DCB */
 		if ((P = prange(obs + i, nav, azel + i * 2, opt, &vmeas)) == 0.0) { continue; }
 
-		/* excluded satellite 剔除不符合的卫星 */
+		/* 4.excluded satellite 剔除不符合的卫星 */
 		if (satexclude(obs[i].sat, svh[i], opt)) { continue; }
 
-		/* ionospheric corrections 电离层校正 */
+		/* 5.ionospheric corrections 电离层校正 */
 		if (!ionocorr(obs[i].time, sys, nav, pos, azel + i * 2, opt, &dion, &vion)) { continue; }
 
 		/* GPS-L1 -> L1/B1  将GPS-L1电离层延迟转换成其他系统L1延迟 */
@@ -427,16 +443,16 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 			dion *= SQR(lam_L1 / lam_carr[0]);
 		}
 
-		/* tropospheric corrections 对流层校正 */
+		/* 6.tropospheric corrections 对流层校正 */
 		if (!tropcorr(obs[i].time, nav, pos, azel + i * 2, opt, &dtrp, &vtrp)) { continue; }
 
-		/* pseudorange residual */
+		/* 7.pseudorange residual */
 		v[nv] = resp[i] = P - (r + dtr - CLIGHT * dts[i * 2] + dion + dtrp);
 
-		/* design matrix */
+		/* 8.design matrix H矩阵赋值(X,Y,Z,dtr) */
 		for (j = 0; j < 4; j++) { H[j + nv * NX_SPP] = j < 3 ? -e[j] : 1.0; }
 
-		/* time system and receiver bias offset */
+		/* 9.time system and receiver bias offset 残差修正其他系统钟差 */
 		if		(sys == SYS_GLO) { v[nv] -= x[4];   H[4 + nv * NX_SPP] = 1.0; ns[1]++; bObserved[1] = 1; }
 		else if (sys == SYS_CMP) { v[nv] -= x[5];   H[5 + nv * NX_SPP] = 1.0; ns[2]++; bObserved[2] = 1; }
 		else if (sys == SYS_GAL) { v[nv] -= x[6];   H[6 + nv * NX_SPP] = 1.0; ns[3]++; bObserved[3] = 1; }
@@ -444,11 +460,10 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 		else					 { H[4 + nv * NX_SPP] = H[5 + nv * NX_SPP] = 0.0; ns[0]++; bObserved[0] = 1; }
 
 		vsat[i] = 1; resp[i] = v[nv];
-
 		satsn[nv] = obs[i].sat;
 		elev_t[sat - 1] = azel[1 + i * 2] * R2D;
 
-		/* error variance */
+		/* 10.error variance 计算残差方差 */
 		var[nv] = varerr(opt, azel[1 + i * 2], sys) + vare[i] + vion + vtrp;
 
 		if (azel[1 + i * 2] < opt->elmin) { var[nv] *= 100.0; }
@@ -457,7 +472,7 @@ static int rescode(const int iter, int bElevCVG, const obsd_t* obs, int n, const
 	}
 
 	for (i = j = 0; i < 5; i++) {
-		if (bObserved[i]) j++;
+		if (bObserved[i]) { j++; }
 	}
 
 	bMulGNSS = 0;
