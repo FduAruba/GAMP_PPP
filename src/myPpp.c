@@ -76,16 +76,16 @@ extern void obsScan_PPP(const prcopt_t* popt, obsd_t* obs, const int nobs, int* 
 		f2 = 1;
 		//if (NFREQ>=3&&(PPP_Glo.sFlag[sat-1].sys&(SYS_GAL|SYS_SBS))) f2=2;
 		if (popt->mode >= PMODE_PPP_KINEMA) {
-			if (obs[i].L[0] * obs[i].L[f2] == 0.0) continue;
+			if (obs[i].L[0] * obs[i].L[f2] == 0.0) { continue; }
 		}
 
-		if (fabs(obs[i].P[0] - obs[i].P[f2]) >= 200.0) continue;
+		if (fabs(obs[i].P[0] - obs[i].P[f2]) >= 200.0) { continue; }
 
 		obs[n] = obs[i];
 		n++;
 	}
 
-	if (nValid) *nValid = n;
+	if (nValid) { *nValid = n; }
 }
 
 /* mutipath correct-------------------------------------------------------------

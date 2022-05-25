@@ -1150,43 +1150,53 @@ extern int calEclips(int prn, double *satp, const double *satv, double *sunp,
 	return eclips_(prn,SVBCOS,ANIGHT,BETA,TTAG,satp,SANTXYZ,satv_,IBLK);
 }
 
+/* 最小二乘估计 */
 extern int lsqPlus(const double *A, const double *y, const int nx, const int nv, double *x, double *Q)
 {
-	int i,j,k,info=0;
-	int *ix;
-	double *A_,*x_,*Q_;
+	/* 局部变量定义 ========================================================= */
+	int i, j, k;					// 循环遍历变量
+	int info = 0;					// 状态标记符([0]:ok [-1]:error)
+	int* ix;						// 未知量索引
+	double* A_, * x_, * Q_;			// 系数阵/待估参数/协方差
+	/* ====================================================================== */
 
-	ix=imat(nx,1);
+	ix = imat(nx, 1);
 
-	for (i=k=0;i<nx;i++) {
-		for (j=0;j<nv;j++) {
-			if (fabs(A[j*nx+i])>1.0e-10) {
-				ix[k++]=i;
-				j=1000;
+	// 待估参数索引赋值
+	for (i = k = 0; i < nx; i++) {
+		for (j = 0; j < nv; j++) {
+			if (fabs(A[j * nx + i]) > 1.0e-10) {
+				ix[k++] = i;
+				j = 1000;
 			}
 		}
 	}
 
-	A_=mat(k*nv,1); x_=mat(k,1); Q_=mat(k*k,1);
+	// 压缩原有矩阵,开辟内存空间
+	A_ = mat(k * nv, 1); x_ = mat(k, 1); Q_ = mat(k * k, 1);
 
-	for (j=0;j<k;j++) {
-		for (i=0;i<nv;i++) {
-			A_[i*k+j]=A[i*nx+ix[j]];
+	// 系数阵A_、待估参数x_赋值
+	for (j = 0; j < k; j++) {
+		for (i = 0; i < nv; i++) {
+			A_[i * k + j] = A[i * nx + ix[j]];
 		}
 
-		x_[j]=x[ix[j]];
+		x_[j] = x[ix[j]];
 	}
 
-	/* least square estimation */
-	info=lsq(A_,y,k,nv,x_,Q_);
+	/* least square estimation 最小二乘估计 */
+	info = lsq(A_, y, k, nv, x_, Q_);
 
-	for (i=0;i<nx*nx;i++) Q[i]=0.0;
+	// Q[]初始化
+	for (i = 0; i < nx * nx; i++) { Q[i] = 0.0; }
 
-	for (i=0;i<k;i++) {
-		x[ix[i]]=x_[i];
+	// x[]、Q[]数值回代
+	for (i = 0; i < k; i++) {
+		x[ix[i]] = x_[i];
 
-		for (j=0;j<k;j++)
-			Q[ix[i]+ix[j]*nx]=Q_[i+j*k];
+		for (j = 0; j < k; j++) { 
+			Q[ix[i] + ix[j] * nx] = Q_[i + j * k]; 
+		}
 	}
 
 	free(ix); free(A_); free(x_); free(Q_);

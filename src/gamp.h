@@ -880,12 +880,14 @@ typedef struct {        /* navigation data type */
     int ne,nemax;       /* number of precise ephemeris */
     int nc,ncmax;       /* number of precise clock */
     int nt,ntmax;       /* number of tec grid data */
+
     eph_t *eph;         /* GPS/QZS/GAL/BDS ephemeris */
     geph_t *geph;       /* GLONASS ephemeris */
     peph_t *peph;       /* precise ephemeris */
     pclk_t *pclk;       /* precise clock */
     tec_t *tec;         /* tec grid data */
     erp_t  erp;         /* earth rotation parameters */
+
     double utc_gps[4];  /* GPS delta-UTC parameters {A0,A1,T,W} */
     double utc_glo[4];  /* GLONASS UTC GPS time parameters */
     double utc_gal[4];  /* Galileo UTC GPS time parameters */
@@ -893,18 +895,22 @@ typedef struct {        /* navigation data type */
     double utc_cmp[4];  /* BeiDou UTC parameters */
     double utc_irn[4];  /* IRNSS UTC parameters */
     double utc_sbs[4];  /* SBAS UTC parameters */
+
     double ion_gps[8];  /* GPS iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     double ion_gal[4];  /* Galileo iono model parameters {ai0,ai1,ai2,0} */
     double ion_qzs[8];  /* QZSS iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     double ion_cmp[8];  /* BeiDou iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
     double ion_irn[8];  /* IRNSS iono model parameters {a0,a1,a2,a3,b0,b1,b2,b3} */
-    int leaps;          /* leap seconds (s) */
+
+    int leaps;                   /* leap seconds (s) */
+
     double lam[MAXSAT][NFREQ];   /* carrier wave lengths (m) */
     double cbias[MAXSAT][5];     /* satellite dcb (0:p1-p2,1:p1-c1,2:p2-c2,3:p1-p3,4:p2-p3) (m) */
     double rbias[MAXRCV][2][3];  /* receiver  dcb (0:p1-p2,1:p1-c1,2:p2-c2) (m) */
     double wlbias[MAXSAT];       /* wide-lane bias (cycle) */
     double glo_cpbias[4];        /* glonass code-phase bias {1C,1P,2C,2P} (m) */
-    char glo_fcn[MAXPRNGLO+1];   /* glonass frequency channel number + 8 */
+    char   glo_fcn[MAXPRNGLO+1]; /* glonass frequency channel number + 8 */
+    
     pcv_t pcvs[MAXSAT];          /* satellite antenna pcv */
 } nav_t;
 
@@ -1232,7 +1238,7 @@ typedef struct {
 
 	int tropMF;             //对流层投影函数
 
-	int ionopnoise;         //ionosphere process noise
+	int ionopnoise;         //ionosphere process noise 0: static  1: random walk  2: random walk (new)  3:white noise
 	int ion_const;          //constraint of using extern ionospheric product, 0:off, 1:on
 
 	//cycle slip set
@@ -1444,6 +1450,8 @@ typedef struct {            /* RTK control/result type */
     char errbuf[MAXERRMSG]; /* error message buffer */
     sol_t  sol;             /* RTK solution */
     prcopt_t opt;           /* processing options */
+
+    FILE* fp_ppp;
 } rtk_t;
 
 typedef struct half_cyc_tag {  /* half-cycle correction list type */
@@ -1659,8 +1667,9 @@ EXPORT double ionppp(const double *pos, const double *azel, double re,
                      double hion, double *pppos);
 EXPORT double tropmodel(gtime_t time, const double *pos, const double *azel,
 	                    double humi, double *zwd, int atmodel);
-EXPORT double tropmapf(gtime_t time, const double *pos, const double *azel,
-                       double *mapfw);
+EXPORT double tropmapf(gtime_t time, const double pos[], 
+    const double azel[], double* mapfw);
+
 EXPORT double tropmapf_nmf(gtime_t time, const double pos[], const double azel[],
 	                       double *mapfw);
 EXPORT int iontec(gtime_t time, const nav_t *nav, const double *pos,
@@ -1688,6 +1697,8 @@ EXPORT int readrnxt(const char *file, int rcv, gtime_t ts, gtime_t te,
                     double tint, const char *opt, obs_t *obs, nav_t *nav,
                     sta_t *sta);
 EXPORT int readrnxc(const char *file, nav_t *nav);
+
+extern void setstr(char* dst, const char* src, int n);
 
 /* ephemeris and clock functions ---------------------------------------------*/
 EXPORT double eph2clk (gtime_t time, const eph_t  *eph);

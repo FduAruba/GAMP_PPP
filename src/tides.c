@@ -111,11 +111,22 @@ static void tide_oload(gtime_t tut, const double* odisp, double* denu)
 	a[3] = (334.329653 + 4069.0340329577 * t - 0.010325 * t2 - 1.2E-5 * t3) * D2R; /* P0 */
 	a[4] = 2.0 * PI;
 
+	/*for (i = 0; i < 11; i++) {
+		for (j = 0; j < 6; j++) {
+			printf("%15.5f", odisp[j + i * 6]);
+		}
+		printf("\n");
+	}*/
+
 	/* displacements by 11 constituents */
 	for (i = 0; i < 11; i++) {
 		ang = 0.0;
-		for (j = 0; j < 5; j++) ang += a[j] * args[i][j];
-		for (j = 0; j < 3; j++) dp[j] += odisp[j + i * 6] * cos(ang - odisp[j + 3 + i * 6] * D2R);
+		for (j = 0; j < 5; j++) { ang += a[j] * args[i][j]; }
+		for (j = 0; j < 3; j++) { 
+			dp[j] += odisp[j + i * 6] * cos(ang - odisp[j + 3 + i * 6] * D2R); 
+			//printf("%15.9f%15.5f%15.5f%20.9f\n", dp[j], odisp[j + i * 6], odisp[j + 3 + i * 6], ang);
+		}
+		//printf("\n");
 	}
 	denu[0] = -dp[1];
 	denu[1] = -dp[2];
@@ -184,21 +195,18 @@ static void tide_pole(gtime_t tut, const double* pos, const double* erpv,
 *          see ref [4] 5.2.1, 5.2.2, 5.2.3
 *          ver.2.4.0 does not use ocean loading and pole tide corrections
 *-----------------------------------------------------------------------------*/
-extern void tidedisp(gtime_t tutc, const double* rr, int opt, const erp_t* erp,
-	const double* odisp, double* dr)
+extern void tidedisp(gtime_t tutc, const double* rr, int opt, const erp_t* erp, const double* odisp, double* dr)
 {
 	gtime_t tut;
 	double pos[2], E[9], drt[3], denu[3], rs[3], rm[3], gmst, erpv[5] = { 0 };
 	int i;
 
-	if (erp) {
-		geterp(erp, utc2gpst(tutc), erpv);
-	}
+	if (erp) { geterp(erp, utc2gpst(tutc), erpv); }
 	tut = timeadd(tutc, erpv[2]);
 
 	dr[0] = dr[1] = dr[2] = 0.0;
 
-	if (norm(rr, 3) <= 0.0) return;
+	if (norm(rr, 3) <= 0.0) { return; }
 
 	pos[0] = asin(rr[2] / norm(rr, 3));
 	pos[1] = atan2(rr[1], rr[0]);

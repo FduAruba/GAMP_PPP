@@ -22,38 +22,53 @@ static int code2sys(char code)
 	return SYS_NONE;
 }
 /* read sp3 header -----------------------------------------------------------*/
-static int readsp3h(FILE* fp, gtime_t* time, char* type, int* sats,
-	double* bfact, char* tsys)
+static int readsp3h(FILE* fp, gtime_t* time, char* type, int* sats, double* bfact, char* tsys)
 {
-	int i, j, k = 0, ns = 0, sys, prn;
+	int i = 0, j, k = 0, ns = 0, sys, prn, row = 0, r;
 	char buff[1024];
+	double tmp[2] = { 0.0 };
 
-	for (i = 0; i < 22; i++) {
-		if (!fgets(buff, sizeof(buff), fp)) break;
-
+	while (fgets(buff, sizeof(buff), fp)) {
 		if (i == 0) {
 			*type = buff[2];
-			if (str2time(buff, 3, 28, time)) return 0;
-		}
-		else if (2 <= i && i <= 6) {
-			if (i == 2) {
-				ns = (int)str2num(buff, 4, 2);
+			if (str2time(buff, 3, 28, time)) {
+				return 0;
 			}
+			i = 1;
+		}
+		else if (strstr(buff, "+") && (ns = (int)str2num(buff, 3, 3)) > 0) {
+			row = ns / 17 - 1;
+
 			for (j = 0; j < 17 && k < ns; j++) {
 				sys = code2sys(buff[9 + 3 * j]);
 				prn = (int)str2num(buff, 10 + 3 * j, 2);
-				if (k < MAXSAT) sats[k++] = satno(sys, prn);
+				if (k < MAXSAT) { sats[k++] = satno(sys, prn); }
+			}
+			for (r = 0; r < row; r++) {
+				if (!fgets(buff, sizeof(buff), fp)) { break; }
+
+				for (j = 0; j < 17 && k < ns; j++) {
+					sys = code2sys(buff[9 + 3 * j]);
+					prn = (int)str2num(buff, 10 + 3 * j, 2);
+					if (k < MAXSAT) { sats[k++] = satno(sys, prn); }
+				}
 			}
 		}
-		else if (i == 12) {
+		else if (strstr(buff, "%c M")) {
 			strncpy(tsys, buff + 9, 3); tsys[3] = '\0';
 		}
-		else if (i == 14) {
-			bfact[0] = str2num(buff, 3, 10);
-			bfact[1] = str2num(buff, 14, 12);
+		else if (strstr(buff, "%f")) {
+			tmp[0] = str2num(buff, 3, 10); tmp[1] = str2num(buff, 3, 10);
+			if (tmp[0] > 0.0 || tmp[1] > 0.0) {
+				bfact[0] = tmp[0]; bfact[1] = tmp[1];
+			}
+		}
+		else if (strstr(buff, "/*") && strlen(buff) < 4) {
+			break;
 		}
 	}
-	return ns;
+	
+	return k;
 }
 /* add precise ephemeris -----------------------------------------------------*/
 static int addpeph(nav_t* nav, peph_t* peph)
@@ -84,12 +99,10 @@ static void readsp3b(FILE* fp, char type, int* sats, int ns, double* bfact,
 	int bvalid = 1;
 
 	while (!feof(fp)) {
-		if (bvalid) {
-			fgets(buff, sizeof(buff), fp);
-		}
+		if (bvalid) { fgets(buff, sizeof(buff), fp); }
 		bvalid = 1;
 
-		if (!strncmp(buff, "EOF", 3)) break;
+		if (!strncmp(buff, "EOF", 3)) { break; }
 
 		if (buff[0] != '*' || str2time(buff, 3, 28, &time)) {
 			continue;
@@ -244,6 +257,7 @@ extern void readsp3(const char* file, nav_t* nav, int opt)
 	else if (strstr(file, "iac") || strstr(file, "IAC")) index = -1;
 	else index = 0;
 
+
 	/* read sp3 header */
 	ns = readsp3h(fp, &time, &type, sats, bfact, tsys);
 
@@ -295,9 +309,9 @@ extern int readdcb_mgex(const char* file, nav_t* nav, const gtime_t time)
 		if (strstr(buff, "+BIAS/SOLUTION")) type = 1;
 		if (strstr(buff, "-BIAS/SOLUTION")) break;
 
-		if (!type) continue;
+		if (!type) { continue; }
 
-		if (strncmp(buff + 1, "DSB", 3) || strncmp(buff + 15, "    ", 4)) continue;
+		if (strncmp(buff + 1, "DSB", 3) || strncmp(buff + 15, "    ", 4)) { continue; }
 
 		iy = (int)str2num(buff, 35, 4); doy1 = (int)str2num(buff, 40, 3); doy2 = (int)str2num(buff, 55, 3);
 		if (iy <= 50) iy += 2000;
@@ -386,7 +400,7 @@ extern int readdcb(const char* file, nav_t* nav)
 	// 开辟dcb文件路径内存在堆区
 	for (i = 0; i < MAXEXFILE; i++) {
 		if (!(efiles[i] = (char*)malloc(1024))) {
-			for (i--; i >= 0; i--) free(efiles[i]);
+			for (i--; i >= 0; i--) { free(efiles[i]); }
 			return 0;
 		}
 	}

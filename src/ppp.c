@@ -544,7 +544,7 @@ static void udtrop_ppp(rtk_t* rtk)
 		initx(rtk, 0.15, var, i);
 
 		if (rtk->opt.tropopt >= TROPOPT_ESTG) {
-			for (j = i + 1; j < i + 3; j++) initx(rtk, 1E-6, VAR_GRA, j);
+			for (j = i + 1; j < i + 3; j++) { initx(rtk, 1E-6, VAR_GRA, j); }
 		}
 	}
 	else {
@@ -583,18 +583,21 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 		elev = rtk->ssat[sat - 1].azel[1];
 		sinel = sin(elev);
 		elev *= R2D;
+
 		if (PPP_Glo.prcOpt_Ex.ionopnoise == 3 || ((PPP_Glo.prcOpt_Ex.ionopnoise == 1 || PPP_Glo.prcOpt_Ex.ionopnoise == 2) && rtk->x[j] == 0.0)) {
 			if (PPP_Glo.prcOpt_Ex.ion_const) {
-				//ionospheric delay derived from GIM
+				//ionospheric delay derived from GIM 电离层约束
 				iontec(obs[i].time, nav, pos, rtk->ssat[sat - 1].azel, 1, &dion_tec, &vari_tec);
 				ion = dion_tec;
 			}
 			else {
 				k = 1;
+				//检测是否双频
 				if (obs[i].P[0] == 0.0 || obs[i].P[k] == 0.0 || lam[0] == 0.0 || lam[k] == 0.0) {
 					continue;
 				}
-				ion = (obs[i].P[0] - obs[i].P[k]) / (1.0 - SQR(lam[k] / lam[0])); // 计算I1电离层延迟量
+				// 计算I1电离层延迟量
+				ion = (obs[i].P[0] - obs[i].P[k]) / (1.0 - SQR(lam[k] / lam[0])); 
 			}
 
 			initx(rtk, ion, VAR_IONO, j);
@@ -603,8 +606,10 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 			PPP_Glo.ssat_Ex[sat - 1].gf = g1;
 		}
 		else if ((PPP_Glo.prcOpt_Ex.ionopnoise == 1 || PPP_Glo.prcOpt_Ex.ionopnoise == 2) && rtk->x[j] != 0.0) {
-			if (PPP_Glo.prcOpt_Ex.ionopnoise == 1) // ionopnoise = 1（random walk）时，对其加噪
+			// ionopnoise = 1（random walk）时，对其加噪
+			if (PPP_Glo.prcOpt_Ex.ionopnoise == 1) {
 				rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[1]) * tt;
+			}
 			else if (PPP_Glo.prcOpt_Ex.ionopnoise == 2) {
 				slip[i] = rtk->ssat[sat - 1].slip[0] || rtk->ssat[sat - 1].slip[1];
 				if (!slip[i]) {
@@ -619,11 +624,14 @@ static void udiono_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 					else
 						rtk->P[j + j * rtk->nx] += SQR(PPP_Glo.prcOpt_Ex.prn_iono / (2 * sinel)) * tt;
 				}
-				else
-					if (elev >= 30.0)
+				else {
+					if (elev >= 30.0) {
 						rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[1]) * tt;
-					else
+					}
+					else {
 						rtk->P[j + j * rtk->nx] += SQR(rtk->opt.prn[1] / (2 * sinel)) * tt;
+					}
+				}	
 			}
 		}
 	}
@@ -653,7 +661,7 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 	for (f = 0; f < NF(&rtk->opt); f++) {
 		/* reset phase-bias if expire obs outage counter */
 		for (i = 0; i < MAXSAT; i++) {
-			/* 如果[1]相位失锁数大于阈值，或[2]模糊度模式是瞬时的，或[3]发生钟跳，则初始化 */
+			/* !!!如果[1]相位失锁数大于阈值，或[2]模糊度模式是瞬时的，或[3]发生钟跳，则初始化 */
 			if (++rtk->ssat[i].outc[f] > (unsigned int)rtk->opt.maxout || rtk->opt.modear == ARMODE_INST || clk_jump) {
 				initx(rtk, 0.0, 0.0, IB(i + 1, f, &rtk->opt));
 			}
@@ -675,11 +683,11 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 				slip[i] = rtk->ssat[sat - 1].slip[f];
 				l = 1;
 				lam = nav->lam[sat - 1];
-				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 || lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) continue;
+				if (obs[i].P[0] == 0.0 || obs[i].P[l] == 0.0 || lam[0] == 0.0 || lam[l] == 0.0 || lam[f] == 0.0) { continue; }
 				ion = (obs[i].P[0] - obs[i].P[l]) / (1.0 - SQR(lam[l] / lam[0]));
 				bias[i] = L[f] - P[f] + 2.0 * ion * SQR(lam[f] / lam[0]); // 计算模糊度bias[i]
 			}
-			if (rtk->x[j] == 0.0 || slip[i] || bias[i] == 0.0) continue;
+			if (rtk->x[j] == 0.0 || slip[i] || bias[i] == 0.0) { continue; }
 
 			offset += bias[i] - rtk->x[j];
 			k++;
@@ -700,9 +708,9 @@ static void udbias_ppp(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 			/* -------------------------------------------------------------------------------------------
 			 * 如果：(1)模糊度bias[i] == 0，则不初始化
-			 *		 (2)模糊度bias[i] != 0，则根据判定x[j](是否有新卫星)和slip[i](是否周跳)，决定是否初始化
+			 *		 (2)模糊度bias[i] != 0，则根据判定x[j](是否有新卫星)或slip[i](是否周跳)，决定是否初始化
 			 --------------------------------------------------------------------------------------------*/
-			if (bias[i] == 0.0 || (rtk->x[j] != 0.0 && !slip[i])) continue;
+			if (bias[i] == 0.0 || (rtk->x[j] != 0.0 && !slip[i])) { continue; }
 
 			/* reinitialize phase-bias if detecting cycle slip */
 			initx(rtk, bias[i], VAR_BIAS, IB(sat, f, &rtk->opt));
@@ -876,12 +884,13 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 		}
 	}
 
-	for (i = 0; i < 3; i++) rr[i] = x[i];
-	if (norm(rr, 3) <= 100.0) return 0; // 为什么norm < 100 ???
+	for (i = 0; i < 3; i++) { rr[i] = x[i]; }
+	if (norm(rr, 3) <= 100.0) { return 0; }
+
 	/* earth tides correction 潮汐校正 */
 	if (opt->tidecorr) {
 		tidedisp(gpst2utc(obs[0].time), rr, opt->tidecorr == 1 ? 1 : 7, &nav->erp, opt->odisp[0], dr);
-		for (i = 0; i < 3; i++) rr[i] += dr[i];
+		for (i = 0; i < 3; i++) { rr[i] += dr[i]; }
 	}
 
 	ecef2pos(rr, pos);
@@ -889,7 +898,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	for (i = 0; i < n && i < MAXOBS; i++) { // i遍历所有卫星
 		sat = obs[i].sat;
 		lam = nav->lam[sat - 1];
-		if (lam[j / 2] == 0.0 || lam[0] == 0.0) continue; // 如果波长lam == 0，则跳过本次循环，加快计算速度
+		if (lam[j / 2] == 0.0 || lam[0] == 0.0) { continue; } // 如果波长lam == 0，则跳过本次循环，加快计算速度
 
 		/* 计算 ---------------------------------------------------------------
 		*  1.r			| 修正地球自转后的星-站距离（3D）
@@ -954,10 +963,10 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 			dcb = bias = 0.0;
 
 			if (opt->ionoopt == IONOOPT_IF12) {
-				if ((y = j % 2 == 0 ? Lc : Pc) == 0.0) continue;
+				if ((y = j % 2 == 0 ? Lc : Pc) == 0.0) { continue; }
 			}
 			else {
-				if ((y = j % 2 == 0 ? L[j / 2] : P[j / 2]) == 0.0) continue;
+				if ((y = j % 2 == 0 ? L[j / 2] : P[j / 2]) == 0.0) { continue; }
 			}
 
 			//C = SQR(lam[j/2]/lam[0]) * ionmapf(pos, azel+i*2) * (j%2 == 0? -1.0 : 1.0);
@@ -967,7 +976,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 			nx_nv = nx * nv;
 
-			for (k = 0; k < nx; k++) H[k + nx_nv] = k < 3 ? -e[k] : 0.0; /*** 观测矩阵对接收机XYZ赋值为-e[k] */
+			for (k = 0; k < nx; k++) { H[k + nx_nv] = k < 3 ? -e[k] : 0.0; } /*** 观测矩阵对接收机XYZ赋值为-e[k] */
 
 			/* receiver clock */
 			cdtr = 0.0;
@@ -1206,7 +1215,7 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 
 		/* 搜索残差最大的卫星，做剔除 */
 		for (j = 1; j < ne; j++) {
-			if (fabs(vmax) >= fabs(ve[j])) continue;
+			if (fabs(vmax) >= fabs(ve[j])) { continue; }
 			vmax = ve[j]; maxobs = obsi[j]; maxfrq = frqi[j]; rej = j;
 		}
 		sat = obs[maxobs].sat;
@@ -1218,8 +1227,10 @@ static int ppp_res(int post, const obsd_t* obs, int n, const double* rs,
 	}
 
 	/* 配置观测协方差R */
-	for (i = 0; i < nv; i++) for (j = 0; j < nv; j++) { // i遍历所有残差观测方程nv行，j遍历所有残差观测方程nv列
-		R[i + j * nv] = i == j ? var[i] : 0.0;
+	for (i = 0; i < nv; i++) {
+		for (j = 0; j < nv; j++) { // i遍历所有残差观测方程nv行，j遍历所有残差观测方程nv列
+			R[i + j * nv] = i == j ? var[i] : 0.0;
+		}
 	}
 
 	return post ? stat : nv;
@@ -1242,7 +1253,7 @@ static void update_stat(rtk_t* rtk, const obsd_t* obs, int n, int stat)
 			if (!rtk->ssat[obs[i].sat - 1].vsat[j]) continue;
 			rtk->ssat[obs[i].sat - 1].lock[j]++;						// 相位锁定计数++
 			rtk->ssat[obs[i].sat - 1].outc[j] = 0;						// 断开计数置0
-			if (j == 0) rtk->sol.ns[0]++;
+			if (j == 0) { rtk->sol.ns[0]++; }
 		}
 	}
 	rtk->sol.stat = rtk->sol.ns[0] < MIN_NSAT_SOL ? SOLQ_NONE : stat;
@@ -1297,6 +1308,20 @@ extern void pppos(rtk_t* rtk, const obsd_t* obs, int n, const nav_t* nav)
 
 	/* satellite positions and clocks */
 	satposs_rtklib(obs[0].time, obs, n, nav, opt->sateph, rs, dts, var, svh);
+
+	if (rtk->fp_ppp) {
+		fprintf(rtk->fp_ppp, "%s ns=%d\n", time_str(obs[0].time, 0), n);
+		for (int i = 0; i < n; i++) {
+			sat = obs[i].sat;
+			if (svh[i] == -1) { continue; }
+			fprintf(rtk->fp_ppp, "%03d", sat);
+			for (int t = 0; t < 3; t++) {
+				fprintf(rtk->fp_ppp, "%18.4f", rs[t + i * 6]);
+			}
+			fprintf(rtk->fp_ppp, "%18.4f\n", CLIGHT * dts[i * 2]);
+		}
+		fprintf(rtk->fp_ppp, "\n");
+	}
 
 	/* exclude measurements of eclipsing satellite (block IIA) */
 	testeclipse(obs, n, nav, rs);

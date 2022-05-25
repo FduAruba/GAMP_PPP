@@ -11,8 +11,8 @@
 /* solution option to field separator ----------------------------------------*/
 static const char* opt2sep(const solopt_t* opt)
 {
-	if (!*opt->sep) return " ";
-	else if (!strcmp(opt->sep, "\\t")) return "\t";
+	if (!*opt->sep) { return " "; }
+	else if (!strcmp(opt->sep, "\\t")) { return "\t"; }
 	return opt->sep;
 }
 /* output solution as the form of lat/lon/height, modified by fzhou @ GFZ, 2017-01-23 -----------------------------*/
@@ -36,26 +36,32 @@ static int outpos(unsigned char* buff, const char* s, const sol_t* sol, const so
 	time = epoch2time(ep);
 	sow = time2gpst(time, &week);
 
-	for (i = 0; i < 3; i++) dxyz[i] = denu[i] = 0.0;
+	if ((ep[3] + ep[4] + ep[5]) == 0.0) {
+		p += sprintf(p, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+			"Year", sep, "Month", sep, "Day", sep, "Hour", sep, "Minute", sep, "Second", sep, "gps_week", sep, "sow", sep,
+			"X-Axis", sep, "Y-Axis", sep, "Z-Axis");
+		//p += sprintf(p, "Year\tMonth\tDay\tHour\tMinute\tSecond\tweek\tsow\tX\tY\t\Z\t\n");
+	}
+
+	for (i = 0; i < 3; i++) { dxyz[i] = denu[i] = 0.0; }
 
 	p += sprintf(p, "%04d%s%02d%s%02d%s%02d%s%02d%s%02d%s%4d%s%9.2f%s%14.4f%s%14.4f%s%14.4f",
 		(int)ep[0], sep, (int)ep[1], sep, (int)ep[2], sep, (int)ep[3], sep, (int)ep[4], sep, (int)ep[5], sep, week, sep, sow, sep,
 		sol->rr[0], sep, sol->rr[1], sep, sol->rr[2]);
 
-	if (PPP_Glo.crdTrue[0] == 0.0) ecef2pos(sol->rr, pos);
-	else ecef2pos(PPP_Glo.crdTrue, pos);
+	if (PPP_Glo.crdTrue[0] == 0.0) { ecef2pos(sol->rr, pos); }
+	else						   { ecef2pos(PPP_Glo.crdTrue, pos); }
 
-	if (PPP_Glo.crdTrue[0] == 0.0)
-		denu[0] = denu[1] = denu[2] = 0.0;
+	if (PPP_Glo.crdTrue[0] == 0.0) { denu[0] = denu[1] = denu[2] = 0.0; }
 	else {
 		ecef2pos(PPP_Glo.crdTrue, pos);
-		for (i = 0; i < 3; i++)
-			denu[i] = dxyz[i] = sol->rr[i] - PPP_Glo.crdTrue[i];
+		for (i = 0; i < 3; i++){ 
+			denu[i] = dxyz[i] = sol->rr[i] - PPP_Glo.crdTrue[i]; 
+		}
 		ecef2enu(pos, dxyz, denu);
 	}
 
-	p += sprintf(p, "%s%8.4f%s%8.4f%s%8.4f%s%8.4f", sep, denu[0], sep, denu[1], sep, denu[2],
-		sep, norm(denu, 3));
+	//p += sprintf(p, "%s%8.4f%s%8.4f%s%8.4f%s%8.4f", sep, denu[0], sep, denu[1], sep, denu[2], sep, norm(denu, 3));
 
 	p += sprintf(p, "\n");
 

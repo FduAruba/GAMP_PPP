@@ -514,7 +514,7 @@ static int valsol(const double* azel, const int* vsat, int n,
 
 	/* large gdop check */
 	for (i = ns = 0; i < n; i++) {
-		if (!vsat[i]) continue;
+		if (!vsat[i]) { continue; }
 		azels[ns * 2] = azel[i * 2];
 		azels[1 + ns * 2] = azel[1 + i * 2];
 		ns++;
@@ -533,20 +533,20 @@ static int valsol(const double* azel, const int* vsat, int n,
 		sprintf(PPP_Glo.chMsg, "*** ERROR: gdop error nv=%d gdop=%.1f\n", nv, dop[0]);
 		outDebug(OUTWIN, OUTFIL, OUTTIM);
 
-		if (ns >= 6) bGdopOK = 0;
+		if (ns >= 6) { bGdopOK = 0; }
 		else {
-			if (dop[0] <= 50.0) bGdopOK = 1;
-			else bGdopOK = 0;
+			if (dop[0] <= 50.0) { bGdopOK = 1; }
+			else                { bGdopOK = 0; }
 		}
 	}
 	if (dop[1] <= 0.0 || dop[1] > 50.0) {
 		sprintf(PPP_Glo.chMsg, "*** ERROR: pdop error nv=%d pdop=%.1f\n", nv, dop[1]);
 		outDebug(OUTWIN, OUTFIL, OUTTIM);
 
-		if (ns >= 6) bPdopOK = 0;
+		if (ns >= 6) { bPdopOK = 0; }
 		else {
-			if (dop[1] <= 60.0) bPdopOK = 1;
-			else bPdopOK = 0;
+			if (dop[1] <= 60.0) { bPdopOK = 1; }
+			else				{ bPdopOK = 0; }
 		}
 	}
 	if (!bPdopOK || !bGdopOK) {
@@ -585,14 +585,14 @@ static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const dou
 			break;
 		}
 
-		/* weight by variance */
+		/* 2.weight by variance 根据噪声加权 */
 		for (j = 0; j < nv; j++) {
 			sig = sqrt(var[j]);
 			v[j] /= sig;
 			for (k = 0; k < NX_SPP; k++) H[k + j * NX_SPP] /= sig;
 		}
 
-		/* least square estimation */
+		/* 3.least square estimation 最小二乘估计 */
 		if ((info = lsqPlus(H, v, NX_SPP, nv, dx, Q))) {
 			sprintf(msg, "lsq error info=%d", info);
 			sprintf(PPP_Glo.chMsg, "%s\n", msg);
@@ -601,13 +601,14 @@ static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const dou
 			break;
 		}
 
-		for (j = 0; j < NX_SPP; j++) x[j] += dx[j];
+		for (j = 0; j < NX_SPP; j++) { x[j] += dx[j]; }
 
 		d0 = norm(dx, NX_SPP);
 
-		if (d0 < 1E4) bElevCVG = 1;
-		else        bElevCVG = 0;
+		if (d0 < 1E4) { bElevCVG = 1; }
+		else		  { bElevCVG = 0; }
 
+		// 输出结果到sol
 		if (d0 < 1E-4) {
 			sol->type = 0;
 			sol->time = timeadd(obs[0].time, -x[3] / CLIGHT);
@@ -616,17 +617,18 @@ static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const dou
 			sol->dtr[2] = x[5] / CLIGHT; /* bds-gps time offset (s) */
 			sol->dtr[3] = x[6] / CLIGHT; /* gal-gps time offset (s) */
 			sol->dtr[4] = x[7] / CLIGHT; /* qzs-gps time offset (s) */
-			for (j = 0; j < 6; j++) sol->rr[j] = j < 3 ? x[j] : 0.0;
-			for (j = 0; j < 3; j++) sol->qr[j] = (float)Q[j + j * NX_SPP];
-			sol->qr[3] = (float)Q[1];    /* cov xy */
-			sol->qr[4] = (float)Q[2 + NX_SPP]; /* cov yz */
-			sol->qr[5] = (float)Q[2];    /* cov zx */
+			for (j = 0; j < 6; j++) { sol->rr[j] = j < 3 ? x[j] : 0.0; }
+			for (j = 0; j < 3; j++) { sol->qr[j] = (float)Q[j + j * NX_SPP]; }
+			sol->qr[3] = (float)Q[1];			/* cov xy */
+			sol->qr[4] = (float)Q[2 + NX_SPP];  /* cov yz */
+			sol->qr[5] = (float)Q[2];			/* cov zx */
 			sol->ns[0] = (unsigned char)nv;
 			sol->rms = sol->dop[0] = sol->dop[1] = sol->dop[2] = sol->dop[3] = 0.0;
 
 			/* validate solution */
-			if ((stat = valsol(azel, vsat, n, opt, v, nv, nx, msg, dop)))
+			if ((stat = valsol(azel, vsat, n, opt, v, nv, nx, msg, dop))) {
 				sol->stat = SOLQ_SINGLE;
+			}
 
 			sol->dop[0] = dop[0];
 			sol->dop[1] = dop[1];
@@ -636,7 +638,7 @@ static int estpos_(int* bDeleted, double* x, const obsd_t* obs, int n, const dou
 			break;
 		}
 	}
-	if (i >= MAXITR) sprintf(msg, "iteration divergent i=%d", i);
+	if (i >= MAXITR) { sprintf(msg, "iteration divergent i=%d", i); }
 
 	free(v); free(H); free(var);
 	return stat;
@@ -698,13 +700,13 @@ static int estpos(const obsd_t* obs, int nobs, const double* rs, const double* d
 		//////////////////////////////////////////////////////////////////////////
 
 		for (i = stat = 0; i < n; i++) {
-			for (j = 0; j < nobs; j++) { bDeleted[obs[j].sat - 1] = 1; }
+			for (j = 0; j < nobs; j++)			   { bDeleted[obs[j].sat - 1] = 1; }
 			for (j = i * nb; j < i * nb + nb; j++) { bDeleted[obs[it[j] - 1].sat - 1] = 0; }
-			for (j = 0; j < NX_SPP; j++) { x_[j] = x[j]; }
+			for (j = 0; j < NX_SPP; j++)		   { x_[j] = x[j]; }
 
 			stat = estpos_(bDeleted, x_, obs, nobs, rs, dts, vare, svh, nav, opt, sol, azel, vsat, resp, msg);
 
-			if (stat == 1) break;
+			if (stat == 1) { break; }
 		}
 
 		free(it);
@@ -770,9 +772,13 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 	opt_.ionoopt = IONOOPT_BRDC;
 	opt_.tropopt = TROPOPT_SAAS;
 
+	// 更新仰角/方位角
 	if (azel) {
-		for (i = 0; i < n * 2; i++) azel[i] = azel_[i];
+		for (i = 0; i < n * 2; i++) { 
+			azel[i] = azel_[i]; 
+		}
 	}
+	// 更新卫星状态
 	if (ssat) {
 		for (i = 0; i < MAXSAT; i++) {
 			ssat[i].vs = 0;
@@ -781,10 +787,10 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 			ssat[i].snr[0] = 0;
 		}
 
-		for (i = 0; i < NSYS; i++) sol->ns[i] = 0;
+		for (i = 0; i < NSYS; i++) { sol->ns[i] = 0; }
 
 		for (i = 0; i < n; i++) {
-			if (!vsat[i]) continue;
+			if (!vsat[i]) { continue; }
 			sat = obs[i].sat;
 			ssat[sat - 1].vs = 1;
 			ssat[sat - 1].azel[0] = azel_[i * 2];
@@ -792,11 +798,11 @@ extern int spp(const obsd_t* obs, int n, const nav_t* nav, const prcopt_t* opt, 
 			ssat[sat - 1].resp_pos[0] = resp[i];
 			ssat[sat - 1].snr[0] = obs[i].SNR[0];
 
-			if		(PPP_Glo.sFlag[sat - 1].sys == SYS_GPS) sol->ns[0]++;
-			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GLO) sol->ns[1]++;
-			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_CMP) sol->ns[2]++;
-			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GAL) sol->ns[3]++;
-			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_QZS) sol->ns[4]++;
+			if		(PPP_Glo.sFlag[sat - 1].sys == SYS_GPS) { sol->ns[0]++; }
+			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GLO) { sol->ns[1]++; }
+			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_CMP) { sol->ns[2]++; }
+			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_GAL) { sol->ns[3]++; }
+			else if (PPP_Glo.sFlag[sat - 1].sys == SYS_QZS) { sol->ns[4]++; }
 			else {
 				sprintf(PPP_Glo.chMsg, "*** WARNING: unsupported satellite system %d %d!\n", PPP_Glo.sFlag[sat - 1].sys, sat);
 				outDebug(OUTWIN, OUTFIL, OUTTIM);

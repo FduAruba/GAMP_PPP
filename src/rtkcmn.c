@@ -427,25 +427,24 @@ extern int satexclude(int sat, int svh, const prcopt_t* opt)
 *          snrmask_t *mask  I   SNR mask
 * return : status (1:masked,0:unmasked)
 *-----------------------------------------------------------------------------*/
-extern int testsnr(int base, int freq, double el, double snr,
-	const snrmask_t* mask)
+extern int testsnr(int base, int freq, double el, double snr, const snrmask_t* mask)
 {
 	double minsnr, a;
 	int i;
 
-	if (!mask->ena[base] || freq < 0 || freq >= NFREQ) return 0;
+	if (!mask->ena[base] || freq < 0 || freq >= NFREQ) { return 0; }
 
 	a = (el * R2D + 5.0) / 10.0;
 	i = (int)floor(a); a -= i;
-	if (i < 1) minsnr = mask->mask[freq][0];
-	else if (i > 8) minsnr = mask->mask[freq][8];
-	else minsnr = (1.0 - a) * mask->mask[freq][i - 1] + a * mask->mask[freq][i];
+	if		(i < 1) { minsnr = mask->mask[freq][0]; }
+	else if (i > 8) { minsnr = mask->mask[freq][8]; }
+	else			{ minsnr = (1.0 - a) * mask->mask[freq][i - 1] + a * mask->mask[freq][i]; }
 
 	return snr < minsnr;
 }
 /* obs type string to obs code -------------------------------------------------
 * convert obs code type string to obs code
-* args   : char   *str   I      obs code string ("1C","1P","1Y",...)
+* args   : char   *obs   I      obs code string ("1C","1P","1Y",...)
 *          int    *freq  IO     frequency (1:L1,2:L2,3:L5,4:L6,5:L7,6:L8,0:err)
 *                               (NULL: no output)
 * return : obs code (CODE_???)
@@ -454,7 +453,7 @@ extern int testsnr(int base, int freq, double el, double snr,
 extern unsigned char obs2code(const char* obs, int* freq)
 {
 	int i;
-	if (freq) *freq = 0;
+	if (freq) { *freq = 0; }
 	for (i = 1; *obscodes[i]; i++) {
 		if (strcmp(obscodes[i], obs)) {
 			continue;
@@ -491,8 +490,7 @@ extern char* code2obs(unsigned char code, int* freq)
 *                               (higher priority precedes lower)
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void setcodepri(int sys, int freq, const char* pri)
-{
+extern void setcodepri(int sys, int freq, const char* pri) {
 	if (freq <= 0 || MAXFREQ < freq) return;
 	if (sys & SYS_GPS) strcpy(codepris[0][freq - 1], pri);
 	if (sys & SYS_GLO) strcpy(codepris[1][freq - 1], pri);
@@ -536,6 +534,8 @@ extern int getcodepri(int sys, unsigned char code, const char* opt)
 		return str[1] == obs[1] ? 15 : 0;
 	}
 	/* search code priority */
+
+	//printf("%s", codepris[i][j - 1]);
 	return (p = strchr(codepris[i][j - 1], obs[1])) ? 14 - (int)(p - codepris[i][j - 1]) : 0;
 }
 /* extract unsigned/signed bits ------------------------------------------------
@@ -669,7 +669,7 @@ extern double* mat(int n, int m)
 {
 	double* p;
 
-	if (n <= 0 || m <= 0) return NULL;
+	if (n <= 0 || m <= 0) { return NULL; }
 	if (!(p = (double*)malloc(sizeof(double) * n * m))) {
 		fatalerr("matrix memory allocation error: n=%d,m=%d\n", n, m);
 	}
@@ -852,22 +852,23 @@ extern int solve(const char* tr, const double* A, const double* Y, int n,
 #else /* without LAPACK/BLAS or MKL */
 
 /* multiply matrix -----------------------------------------------------------*/
-extern void matmul(const char* tr, int n, int k, int m, double alpha,
-	const double* A, const double* B, double beta, double* C)
+extern void matmul(const char* tr, int n, int k, int m, double alpha, const double* A, const double* B, double beta, double* C)
 {
 	double d;
 	int i, j, x, f = tr[0] == 'N' ? (tr[1] == 'N' ? 1 : 2) : (tr[1] == 'N' ? 3 : 4);
 
-	for (i = 0; i < n; i++) for (j = 0; j < k; j++) {
-		d = 0.0;
-		switch (f) {
-		case 1: for (x = 0; x < m; x++) d += A[i + x * n] * B[x + j * m]; break;
-		case 2: for (x = 0; x < m; x++) d += A[i + x * n] * B[j + x * k]; break;
-		case 3: for (x = 0; x < m; x++) d += A[x + i * m] * B[x + j * m]; break;
-		case 4: for (x = 0; x < m; x++) d += A[x + i * m] * B[j + x * k]; break;
+	for (i = 0; i < n; i++)
+		for (j = 0; j < k; j++) {
+			d = 0.0;
+			switch (f) {
+			case 1: for (x = 0; x < m; x++) { d += A[i + x * n] * B[x + j * m]; } break;
+			case 2: for (x = 0; x < m; x++) { d += A[i + x * n] * B[j + x * k]; } break;
+			case 3: for (x = 0; x < m; x++) { d += A[x + i * m] * B[x + j * m]; } break;
+			case 4: for (x = 0; x < m; x++) { d += A[x + i * m] * B[j + x * k]; } break;
+			}
+			if (beta == 0.0) { C[i + j * n] = alpha * d; }
+			else			 { C[i + j * n] = alpha * d + beta * C[i + j * n]; }
 		}
-		if (beta == 0.0) C[i + j * n] = alpha * d; else C[i + j * n] = alpha * d + beta * C[i + j * n];
-	}
 }
 /* LU decomposition ----------------------------------------------------------*/
 static int ludcmp(double* A, int n, int* indx, double* d)
@@ -960,17 +961,20 @@ extern int solve(const char* tr, const double* A, const double* Y, int n,
 * notes  : for weighted least square, replace A and y by A*w and w*y (w=W^(1/2))
 *          matirix stored by column-major order (fortran convention)
 *-----------------------------------------------------------------------------*/
-extern int lsq(const double* A, const double* y, int n, int m, double* x,
-	double* Q)
+extern int lsq(const double* A, const double* y, int n, int m, double* x, double* Q)
 {
-	double* Ay;
-	int info;
+	/* 局部变量定义 ========================================================= */
+	double* Ay;					// 临时向量
+	int info;					// 状态标记符([0]:ok [-1]:error)
+	/* ====================================================================== */
 
-	if (m < n) return -1;
+	if (m < n) { return -1; }
 	Ay = mat(n, 1);
 	matmul("NN", n, 1, m, 1.0, A, y, 0.0, Ay); /* Ay=A*y */
 	matmul("NT", n, n, m, 1.0, A, A, 0.0, Q);  /* Q=A*A' */
-	if (!(info = matinv(Q, n))) matmul("NN", n, 1, n, 1.0, Q, Ay, 0.0, x); /* x=Q^-1*Ay */
+	if (!(info = matinv(Q, n))) {			   /* x=Q^-1*Ay */
+		matmul("NN", n, 1, n, 1.0, Q, Ay, 0.0, x); 
+	} 
 	free(Ay);
 	return info;
 }
@@ -1036,20 +1040,27 @@ extern int filter(double* x, double* P, const double* H, const double* v, const 
 	ix = imat(n, 1);
 	for (i = k = 0; i < n; i++) { 
 		/* i遍历所有未知量n，如果x[i] != 0，且对应P对应的对角线元素 > 0，获取ix的索引 */ 
-		if (x[i] != 0.0 && P[i + i * n] > 0.0) ix[k++] = i;
+		if (x[i] != 0.0 && P[i + i * n] > 0.0) { ix[k++] = i; }
 	}
 
 	/* 根据k重新定义一个小矩阵，节约内存 */
 	x_ = mat(k, 1); xp_ = mat(k, 1); P_ = mat(k, k); Pp_ = mat(k, k); H_ = mat(k, m);
 	for (i = 0; i < k; i++) {
 		x_[i] = x[ix[i]];
-		for (j = 0; j < k; j++) P_[i + j * k] = P[ix[i] + ix[j] * n];
-		for (j = 0; j < m; j++) H_[i + j * k] = H[ix[i] + j * n];
+		for (j = 0; j < k; j++) { P_[i + j * k] = P[ix[i] + ix[j] * n]; }
+		for (j = 0; j < m; j++) { H_[i + j * k] = H[ix[i] + j * n]; }
 	}
+	/*for (int i = 0; i < k; i++) {
+		for (int j = 0; j < k; j++) {
+			printf("%8.3f", P_[i + j * k]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
 	info = filter_(x_, P_, H_, v, R, k, m, xp_, Pp_);
 	for (i = 0; i < k; i++) {
 		x[ix[i]] = xp_[i];
-		for (j = 0; j < k; j++) P[ix[i] + ix[j] * n] = Pp_[i + j * k];
+		for (j = 0; j < k; j++) { P[ix[i] + ix[j] * n] = Pp_[i + j * k]; }
 	}
 	free(ix); free(x_); free(xp_); free(P_); free(Pp_); free(H_);
 	return info;
@@ -1117,13 +1128,15 @@ extern void matprint(const double A[], int n, int m, int p, int q)
 *          int    i,n       I   substring position and width
 * return : converted number (0.0:error)
 *-----------------------------------------------------------------------------*/
-extern double str2num(const char* s, int i, int n)
-{
+extern double str2num(const char* s, int i, int n) {
 	double value;
 	char str[256], * p = str;
 
-	if (i < 0 || (int)strlen(s) < i || (int)sizeof(str) - 1 < n) return 0.0;
-	for (s += i; *s && --n >= 0; s++) *p++ = *s == 'd' || *s == 'D' ? 'E' : *s; *p = '\0';
+	if (i < 0 || (int)strlen(s) < i || (int)sizeof(str) - 1 < n) { return 0.0; }
+	for (s += i; *s && --n >= 0; s++) {
+		*p++ = *s == 'd' || *s == 'D' ? 'E' : *s; 
+	} 
+	*p = '\0';
 	return sscanf(str, "%lf", &value) == 1 ? value : 0.0;
 }
 /* string to time --------------------------------------------------------------
@@ -1147,8 +1160,8 @@ extern int str2time(const char* s, int i, int n, gtime_t* t)
 	// 字符串复制
 	for (s += i; *s && --n >= 0;) {
 		*p++ = *s++; 
-		*p = '\0';
 	}
+	*p = '\0';
 	// 将str中的字符转存至ep中，若出错，返回-1
 	if (sscanf(str, "%lf %lf %lf %lf %lf %lf", ep, ep + 1, ep + 2, ep + 3, ep + 4, ep + 5) < 6) {
 		return -1;
@@ -1219,7 +1232,7 @@ extern gtime_t yrdoy2time(const int yyyy, const int doy)
 	dd = 0;
 	for (mm = 0; mm < 12; mm++) {
 		id -= days_in_month[mm];
-		if (id > 0) continue;
+		if (id > 0) { continue; }
 		dd = id + days_in_month[mm];
 		break;
 	}
@@ -2068,7 +2081,9 @@ static int readantex(const char* file, pcvs_t* pcvs)
 		if (strstr(buff + 60, "TYPE / SERIAL NO")) {
 			strncpy(pcv.type, buff, 20); pcv.type[20] = '\0';
 			strncpy(pcv.code, buff + 20, 20); pcv.code[20] = '\0';
-			if (!(prn = (int)str2num(pcv.code, 1, 2))) continue;
+			if (!(prn = (int)str2num(pcv.code, 1, 2))) { 
+				continue; 
+			}
 			if (!strncmp(pcv.code + 3, "        ", 8)) {
 				pcv.sat = satid2no(pcv.code);
 			}
@@ -2391,7 +2406,7 @@ extern int geterp(const erp_t* erp, gtime_t time, double* erpv)
 	double mjd, day, a;
 	int i = 0, j, k;
 
-	if (erp->n <= 0) return 0;
+	if (erp->n <= 0) { return 0; }
 
 	mjd = 51544.5 + (timediff(gpst2utc(time), epoch2time(ep))) / 86400.0;
 
@@ -2413,9 +2428,9 @@ extern int geterp(const erp_t* erp, gtime_t time, double* erpv)
 	}
 	for (j = 0, k = erp->n - 1; j <= k;) {
 		i = (j + k) / 2;
-		if (mjd < erp->data[i].mjd) k = i - 1;
-		else if (mjd > erp->data[i + 1].mjd) j = i + 1;
-		else break;
+		if		(mjd < erp->data[i].mjd)     { k = i - 1; }
+		else if (mjd > erp->data[i + 1].mjd) { j = i + 1; }
+		else								 { break; }
 	}
 	if (erp->data[i].mjd == mjd - erp->data[i + 1].mjd) {
 		a = 0.5;
@@ -2594,8 +2609,8 @@ extern int sortobs(obs_t* obs)
 extern int screent(gtime_t time, gtime_t ts, gtime_t te, double tint)
 {
 	return (tint <= 0.0 || fmod(time2gpst(time, NULL) + DTTOL, tint) <= DTTOL * 2.0) &&
-		(ts.time == 0 || timediff(time, ts) >= -DTTOL) &&
-		(te.time == 0 || timediff(time, te) < DTTOL);
+		   (ts.time == 0 || timediff(time, ts) >= -DTTOL) &&
+		   (te.time == 0 || timediff(time, te) < DTTOL);
 }
 /* read/save navigation data ---------------------------------------------------
 * save or load navigation data
@@ -3101,24 +3116,24 @@ extern void dops(int ns, const double* azel, double elmin, double* dop)
 	double H[4 * MAXSAT], Q[16], cosel, sinel;
 	int i, n;
 
-	for (i = 0; i < 4; i++) dop[i] = 0.0;
+	for (i = 0; i < 4; i++) { dop[i] = 0.0; }
 	for (i = n = 0; i < ns && i < MAXSAT; i++) {
-		if (azel[1 + i * 2] < elmin || azel[1 + i * 2] <= 0.0) continue;
+		if (azel[1 + i * 2] < elmin || azel[1 + i * 2] <= 0.0) { continue; }
 		cosel = cos(azel[1 + i * 2]);
 		sinel = sin(azel[1 + i * 2]);
-		H[4 * n] = cosel * sin(azel[i * 2]);
-		H[1 + 4 * n] = cosel * cos(azel[i * 2]);
-		H[2 + 4 * n] = sinel;
+		H[4 * n]	   = cosel * sin(azel[i * 2]);
+		H[1 + 4 * n]   = cosel * cos(azel[i * 2]);
+		H[2 + 4 * n]   = sinel;
 		H[3 + 4 * n++] = 1.0;
 	}
-	if (n < 4) return;
+	if (n < 4) { return; }
 
 	matmul("NT", 4, 4, n, 1.0, H, H, 0.0, Q);
 	if (!matinv(Q, 4)) {
 		dop[0] = SQRT(Q[0] + Q[5] + Q[10] + Q[15]); /* GDOP */
-		dop[1] = SQRT(Q[0] + Q[5] + Q[10]);       /* PDOP */
-		dop[2] = SQRT(Q[0] + Q[5]);             /* HDOP */
-		dop[3] = SQRT(Q[10]);                 /* VDOP */
+		dop[1] = SQRT(Q[0] + Q[5] + Q[10]);		    /* PDOP */
+		dop[2] = SQRT(Q[0] + Q[5]);                 /* HDOP */
+		dop[3] = SQRT(Q[10]);                       /* VDOP */
 	}
 }
 /* ionosphere model ------------------------------------------------------------
@@ -3247,13 +3262,13 @@ extern double tropmodel(gtime_t time, const double* pos, const double* azel, dou
 
 		return 0.0;
 	}
-	if (pos[2] >= 1.0 / 2.2557E-5) return 0.0;
+	if (pos[2] >= 1.0 / 2.2557E-5) { return 0.0; }
 
 	hgt = pos[2] < 0.0 ? 0.0 : pos[2];
 
-	//高程过大会导致计算出的数值不合理，延迟量为无穷大
+	// 高程过大会导致计算出的数值不合理，延迟量为无穷大
 	if (hgt > 15000.0) {
-		//解算开始的第一个历元高程总满足-100.0，不输出下面调试信息
+		// 解算开始的第一个历元高程总满足-100.0，不输出下面调试信息
 		b1 = (PPP_Glo.iEpoch) == 1 && (PPP_Glo.revs == 0) && (PPP_Glo.prcOpt_Ex.solType == 0 ||
 			PPP_Glo.prcOpt_Ex.solType == 3 || PPP_Glo.prcOpt_Ex.solType == 4);
 		b2 = (PPP_Glo.nEpoch - 1 == PPP_Glo.iEpoch) && (PPP_Glo.revs == 1) && (PPP_Glo.prcOpt_Ex.solType == 1
@@ -3300,7 +3315,9 @@ extern double tropmodel(gtime_t time, const double* pos, const double* azel, dou
 static double interpc(const double coef[], double lat)
 {
 	int i = (int)(lat / 15.0);
-	if (i < 1) return coef[0]; else if (i > 4) return coef[4];
+	if		(i < 1) { return coef[0]; }
+	else if (i > 4) { return coef[4]; }
+
 	return coef[i - 1] * (1.0 - lat / 15.0 + i) + coef[i] * (lat / 15.0 - i);
 }
 static double mapf(double el, double a, double b, double c)
@@ -3332,7 +3349,7 @@ extern double tropmapf_nmf(gtime_t time, const double pos[], const double azel[]
 	int i;
 
 	if (el <= 0.0) {
-		if (mapfw) *mapfw = 0.0;
+		if (mapfw) { *mapfw = 0.0; }
 		return 0.0;
 	}
 	/* year from doy 28, added half a year for southern latitudes */
@@ -3348,7 +3365,7 @@ extern double tropmapf_nmf(gtime_t time, const double pos[], const double azel[]
 	/* ellipsoidal height is used instead of height above sea level */
 	dm = (1.0 / sin(el) - mapf(el, aht[0], aht[1], aht[2])) * hgt / 1E3;
 
-	if (mapfw) *mapfw = mapf(el, aw[0], aw[1], aw[2]);
+	if (mapfw) { *mapfw = mapf(el, aw[0], aw[1], aw[2]); }
 
 	return mapf(el, ah[0], ah[1], ah[2]) + dm;
 }
@@ -3479,8 +3496,7 @@ static double interpvar1(double azim, double zeni, const pcv_t* pcv, int f)
 * return : none
 * notes  : current version does not support azimuth dependent terms
 *-----------------------------------------------------------------------------*/
-extern void antmodel(int sat, const pcv_t* pcv, const double* del, const double* azel,
-	int opt, double* dant)
+extern void antmodel(int sat, const pcv_t* pcv, const double* del, const double* azel, int opt, double* dant)
 {
 	double e[3], off[3], cosel = cos(azel[1]);
 	int i, j, ii = 0, sys;
@@ -3631,8 +3647,7 @@ static void sunmoonpos_eci(gtime_t tut, double* rsun, double* rmoon)
 *          double *gmst     O   gmst (rad)
 * return : none
 *-----------------------------------------------------------------------------*/
-extern void sunmoonpos(gtime_t tutc, const double* erpv, double* rsun,
-	double* rmoon, double* gmst)
+extern void sunmoonpos(gtime_t tutc, const double* erpv, double* rsun, double* rmoon, double* gmst)
 {
 	gtime_t tut;
 	double rs[3], rm[3], U[9], gmst_;
@@ -3646,9 +3661,9 @@ extern void sunmoonpos(gtime_t tutc, const double* erpv, double* rsun,
 	eci2ecef(tutc, erpv, U, &gmst_);
 
 	/* sun and moon postion in ecef */
-	if (rsun) matmul("NN", 3, 1, 3, 1.0, U, rs, 0.0, rsun);
-	if (rmoon) matmul("NN", 3, 1, 3, 1.0, U, rm, 0.0, rmoon);
-	if (gmst) *gmst = gmst_;
+	if (rsun)  { matmul("NN", 3, 1, 3, 1.0, U, rs, 0.0, rsun); }
+	if (rmoon) { matmul("NN", 3, 1, 3, 1.0, U, rm, 0.0, rmoon); }
+	if (gmst)  { *gmst = gmst_; }
 }
 /* carrier smoothing -----------------------------------------------------------
 * carrier smoothing by Hatch filter

@@ -38,7 +38,7 @@ typedef struct {                        /* signal index type */
 } sigind_t;
 
 /* set string without tail space ---------------------------------------------*/
-static void setstr(char* dst, const char* src, int n)
+extern void setstr(char* dst, const char* src, int n)
 {
 	char* p = dst;
 	const char* q = src;
@@ -549,8 +549,7 @@ static int decode_obsepoch(FILE* fp, char* buff, double ver, gtime_t* time, int*
 	return n;
 }
 /* decode obs data -----------------------------------------------------------*/
-static int decode_obsdata(FILE* fp, char* buff, double ver, int mask, sigind_t* index, obsd_t* obs)
-{
+static int decode_obsdata(FILE* fp, char* buff, double ver, int mask, sigind_t* index, obsd_t* obs) {
 	/* 局部变量定义 ========================================================= */
 	sigind_t* ind;							// 信号索引
 	double val[MAXOBSTYPE] = { 0 };			// 每行的值(伪距/相位)
@@ -675,19 +674,17 @@ static int decode_obsdata(FILE* fp, char* buff, double ver, int mask, sigind_t* 
 	return 1;
 }
 /* save slips ----------------------------------------------------------------*/
-static void saveslips(unsigned char slips[][NFREQ], obsd_t* data)
-{
+static void saveslips(unsigned char slips[][NFREQ], obsd_t* data) {
 	int i;
 	for (i = 0; i < NFREQ; i++) {
-		if (data->LLI[i] & 1) slips[data->sat - 1][i] |= 1;
+		if (data->LLI[i] & 1) { slips[data->sat - 1][i] |= 1; }
 	}
 }
 /* restore slips -------------------------------------------------------------*/
-static void restslips(unsigned char slips[][NFREQ], obsd_t* data)
-{
+static void restslips(unsigned char slips[][NFREQ], obsd_t* data) {
 	int i;
 	for (i = 0; i < NFREQ; i++) {
-		if (slips[data->sat - 1][i] & 1) data->LLI[i] |= 1;
+		if (slips[data->sat - 1][i] & 1) { data->LLI[i] |= 1; }
 		slips[data->sat - 1][i] = 0;
 	}
 }
@@ -709,7 +706,8 @@ static int addobsdata(obs_t* obs, const obsd_t* data)
 	}
 
 	if (obs->nmax <= obs->n) {
-		if (obs->nmax <= 0) obs->nmax = NINCOBS; else obs->nmax *= 2;
+		if (obs->nmax <= 0) { obs->nmax = NINCOBS; }
+		else				{ obs->nmax *= 2; }
 		// 为obsd分配内存空间
 		if (!(obs_data = (obsd_t*)realloc(obs->data, sizeof(obsd_t) * obs->nmax))) {
 			//sprintf(PPP_Glo.chMsg,"*** ERROR: addobsdata: memalloc error n=%dx%d\n",sizeof(obsd_t),obs->nmax);
@@ -723,14 +721,13 @@ static int addobsdata(obs_t* obs, const obsd_t* data)
 	return 1;
 }
 /* set system mask -----------------------------------------------------------*/
-static int set_sysmask(const char* opt)
-{
+static int set_sysmask(const char* opt) {
 	/* 局部变量定义 ========================================================= */
 	const char* p;						// 系统首字母
 	int mask = SYS_NONE;				// 系统筛选(默认无)
 	/* ====================================================================== */
 
-	if (!(p = strstr(opt, "-SYS="))) return SYS_ALL;
+	if (!(p = strstr(opt, "-SYS="))) { return SYS_ALL; }
 
 	for (p += 5; *p && *p != ' '; p++) {
 		switch (*p) {
@@ -745,8 +742,7 @@ static int set_sysmask(const char* opt)
 	return mask;
 }
 /* set signal index ----------------------------------------------------------*/
-static void set_index(double ver, int sys, const char* opt, char tobs[MAXOBSTYPE][4], sigind_t* ind)
-{
+static void set_index(double ver, int sys, const char* opt, char tobs[MAXOBSTYPE][4], sigind_t* ind) {
 	/* 局部变量定义 ========================================================= */
 	const char* p;						// 系统首字母指针
 	char str[8], * optstr = "";			// 相位偏移相关选项[一般没用]
@@ -783,9 +779,9 @@ static void set_index(double ver, int sys, const char* opt, char tobs[MAXOBSTYPE
 	case SYS_CMP: optstr = "-CL%2s=%lf"; break;
 	}
 	for (p = opt; p && (p = strchr(p, '-')); p++) {
-		if (sscanf(p, optstr, str, &shift) < 2) continue;
+		if (sscanf(p, optstr, str, &shift) < 2) { continue; }
 		for (i = 0; i < n; i++) {
-			if (strcmp(code2obs(ind->code[i], NULL), str)) continue;
+			if (strcmp(code2obs(ind->code[i], NULL), str)) { continue; }
 			ind->shift[i] = shift;
 			printf("phase shift: sys=%2d tobs=%s shift=%.3f\n", sys, tobs[i], shift);
 		}
@@ -815,10 +811,10 @@ static void set_index(double ver, int sys, const char* opt, char tobs[MAXOBSTYPE
 				}
 			}
 		}
-		if (k0 >= 0) ind->pos[k0] = i;
-		if (k1 >= 0) ind->pos[k1] = i;
-		if (k2 >= 0) ind->pos[k2] = i;
-		if (k3 >= 0) ind->pos[k3] = i;
+		if (k0 >= 0) { ind->pos[k0] = i; }
+		if (k1 >= 0) { ind->pos[k1] = i; }
+		if (k2 >= 0) { ind->pos[k2] = i; }
+		if (k3 >= 0) { ind->pos[k3] = i; }
 	}
 	/* assign index of extended obs data [一般没用] */
 	for (i = 0; i < NEXOBS; i++) {
@@ -834,14 +830,13 @@ static void set_index(double ver, int sys, const char* opt, char tobs[MAXOBSTYPE
 	
 	/* 测试代码，输出被排除的obs类型 */
 	for (i = 0; i < n; i++) {
-		if (!ind->code[i] || !ind->pri[i] || ind->pos[i] >= 0) continue;
+		if (!ind->code[i] || !ind->pri[i] || ind->pos[i] >= 0) { continue; }
 		//printf("reject obs type: sys=%2d, obs=%s\n",sys,tobs[i]);
 	}
 	ind->n = n;
 }
 /* read rinex obs data body --------------------------------------------------*/
-static int readrnxobsb(FILE* fp, const char* opt, double ver, char tobs[][MAXOBSTYPE][4], int* flag, obsd_t* data)
-{
+static int readrnxobsb(FILE* fp, const char* opt, double ver, char tobs[][MAXOBSTYPE][4], int* flag, obsd_t* data) {
 	/* 局部变量定义 ===================================================================== */
 	gtime_t time = { 0 };							// GPS时间变量
 	sigind_t index[6] = { {0} };					// 信号索引
@@ -879,13 +874,12 @@ static int readrnxobsb(FILE* fp, const char* opt, double ver, char tobs[][MAXOBS
 				n++;
 			}
 		}
-		if (++i > nsat) return n; // 
+		if (++i > nsat) { return n; } 
 	}
 	return -1;
 }
 /* read rinex obs ------------------------------------------------------------*/
-static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char* opt, int rcv, double ver, int tsys, char tobs[][MAXOBSTYPE][4], obs_t* obs)
-{
+static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char* opt, int rcv, double ver, int tsys, char tobs[][MAXOBSTYPE][4], obs_t* obs){
 	/* 局部变量定义 ===================================================================== */
 	obsd_t* data;									// 单个obs数据
 	unsigned char slips[MAXSAT][NFREQ] = { {0} };	// 周跳标记
@@ -894,12 +888,10 @@ static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char*
 	/* ================================================================================== */
 	rcv = 1;
 
-	if (!obs || rcv > MAXRCV) return 0;
+	if (!obs || rcv > MAXRCV) { return 0; }
 
 	/* 1.给obs分配内存 */
-	if (!(data = (obsd_t*)malloc(sizeof(obsd_t) * MAXOBS))) {
-		return 0;
-	} 
+	if (!(data = (obsd_t*)malloc(sizeof(obsd_t) * MAXOBS))) { return 0; }
 
 	/* 2.read rinex obs data body */
 	while ((n = readrnxobsb(fp, opt, ver, tobs, &flag, data)) >= 0 && stat >= 0) {
@@ -911,7 +903,7 @@ static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char*
 			saveslips(slips, data + i);
 		}
 		/* 2.3 screen data by time */
-		if (n > 0 && !screent(data[0].time, ts, te, tint)) continue;
+		if (n > 0 && !screent(data[0].time, ts, te, tint)) { continue; }
 
 		for (i = 0; i < n; i++) {
 			/* 2.4 restore cycle-slip */
@@ -920,7 +912,7 @@ static int readrnxobs(FILE* fp, gtime_t ts, gtime_t te, double tint, const char*
 			data[i].rcv = (unsigned char)rcv;
 
 			/* 2.5 save obs data */
-			if ((stat = addobsdata(obs, data + i)) < 0) break;
+			if ((stat = addobsdata(obs, data + i)) < 0) { break; }
 		}
 	}
 
@@ -1024,9 +1016,7 @@ static int decode_eph(double ver, int sat, gtime_t toc, const double* data, eph_
 	return 1;
 }
 /* decode glonass ephemeris --------------------------------------------------*/
-static int decode_geph(double ver, int sat, gtime_t toc, double* data,
-	geph_t* geph)
-{
+static int decode_geph(double ver, int sat, gtime_t toc, double* data, geph_t* geph) {
 	geph_t geph0 = { 0 };
 	gtime_t tof;
 	double tow, tod;
@@ -1076,8 +1066,7 @@ static int decode_geph(double ver, int sat, gtime_t toc, double* data,
 	return 1;
 }
 /* read rinex navigation data body -------------------------------------------*/
-static int readrnxnavb(FILE* fp, const char* opt, double ver, int sys, int* type, eph_t* eph, geph_t* geph)
-{
+static int readrnxnavb(FILE* fp, const char* opt, double ver, int sys, int* type, eph_t* eph, geph_t* geph) {
 	/* 局部变量定义 ========================================================= */
 	gtime_t toc;					// 星历播发时间
 	double data[64];				// 星历数据
@@ -1130,13 +1119,13 @@ static int readrnxnavb(FILE* fp, const char* opt, double ver, int sys, int* type
 			}
 			/* decode GLONASS ephemeris 解码GLONASS星历 */
 			if (sys == SYS_GLO && i >= 15) {
-				if (!(mask & sys)) return 0;
+				if (!(mask & sys)) { return 0; }
 				*type = 1;
 				return decode_geph(ver, sat, toc, data, geph);
 			}
 			/* decode GPS/GAL/BDS ephemeris 解码其它星历 */
 			else if (i >= 31) {
-				if (!(mask & sys)) return 0;
+				if (!(mask & sys)) { return 0; }
 				*type = 0;
 				return decode_eph(ver, sat, toc, data, eph);
 			}
@@ -1145,8 +1134,7 @@ static int readrnxnavb(FILE* fp, const char* opt, double ver, int sys, int* type
 	return -1;
 }
 /* add ephemeris to navigation data ------------------------------------------*/
-static int add_eph(nav_t* nav, const eph_t* eph)
-{
+static int add_eph(nav_t* nav, const eph_t* eph) {
 	eph_t* nav_eph;
 
 	if (nav->nmax <= nav->n) {
@@ -1178,25 +1166,24 @@ static int add_geph(nav_t* nav, const geph_t* geph)
 	return 1;
 }
 /* read rinex nav/gnav/geo nav -----------------------------------------------*/
-static int readrnxnav(FILE* fp, const char* opt, double ver, int sys, nav_t* nav)
-{
+static int readrnxnav(FILE* fp, const char* opt, double ver, int sys, nav_t* nav) {
 	/* 局部变量定义 ========================================================= */
-	eph_t eph = { 0 };				// 星历变量结构体
-	geph_t geph = { 0 };			// GLONASS星历变量结构体
+	eph_t  eph  = { 0 };			// GPS星历变量结构体
+	geph_t geph = { 0 };			// GLO星历变量结构体
 	int stat, type;					// 状态标记/类型标记
 	/* ====================================================================== */
 
-	if (!nav) return 0;
+	if (!nav) { return 0; }
 
 	/* read rinex navigation data body */
 	while ((stat = readrnxnavb(fp, opt, ver, sys, &type, &eph, &geph)) >= 0) {
 		/* add ephemeris to navigation data */
 		if (stat) {
 			switch (type) {
-			case  1: stat = add_geph(nav, &geph); break;
-			default: stat = add_eph(nav, &eph)  ; break;
+			case  1: { stat = add_geph(nav, &geph); break; }
+			default: { stat = add_eph (nav, &eph);  break; }
 			}
-			if (!stat) return 0;
+			if (!stat) { return 0; }
 		}
 	}
 	return nav->n > 0 || nav->ng > 0;
@@ -1252,10 +1239,9 @@ static int readrnxclk(FILE* fp, const char* opt, int index, nav_t* nav)
 	return nav->nc > 0;
 }
 /* read rinex file -----------------------------------------------------------*/
-static int readrnxfp(FILE* fp, gtime_t ts, gtime_t te, double tint, const char* opt, int flag, int index, char* type, obs_t* obs, nav_t* nav, sta_t* sta)
-{
+static int readrnxfp(FILE* fp, gtime_t ts, gtime_t te, double tint, const char* opt, int flag, int index, char* type, obs_t* obs, nav_t* nav, sta_t* sta){
 	/* 局部变量定义 ===================================================================== */
-	double ver;										// Rinex版本
+	double ver;										// RINEX版本
 	int sys, tsys;									// 卫星系统/时间系统
 	char tobs[NUMSYS][MAXOBSTYPE][4] = { {""} };	// obs类型
 	/* ================================================================================== */
@@ -1281,8 +1267,7 @@ static int readrnxfp(FILE* fp, gtime_t ts, gtime_t te, double tint, const char* 
 	return 0;
 }
 /* uncompress and read rinex file --------------------------------------------*/
-static int readrnxfile(const char* file, gtime_t ts, gtime_t te, double tint, const char* opt, int flag, int index, char* type, obs_t* obs, nav_t* nav, sta_t* sta)
-{
+static int readrnxfile(const char* file, gtime_t ts, gtime_t te, double tint, const char* opt, int flag, int index, char* type, obs_t* obs, nav_t* nav, sta_t* sta) {
 	/* 局部变量定义 ===================================================================== */
 	FILE* fp;								// 读文件指针
 	int stat;								// 状态标记
@@ -1357,8 +1342,8 @@ extern int readrnxt(const char* file, int rcv, gtime_t ts, gtime_t te, double ti
 
 	/* if station name empty, set 4-char name from file head 给站名赋值(4位) */
 	if (type == 'O' && sta) {
-		if (!(p = strrchr(file, FILEPATHSEP))) p = file - 1;
-		if (!*sta->name) setstr(sta->name, p + 1, 4);
+		if (!(p = strrchr(file, FILEPATHSEP))) { p = file - 1; }
+		if (!*sta->name) { setstr(sta->name, p + 1, 4); }
 	}
 
 	// 释放files内存

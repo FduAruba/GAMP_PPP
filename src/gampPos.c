@@ -838,8 +838,8 @@ static void procpos(rtk_t* rtk, const prcopt_t* popt, const solopt_t* sopt, int 
 
 		/* 4.执行ppp定位 */
 		i = rtkpos(rtk, obs, n, &navs);
-		if (i == -1) rtk->sol.stat = SOLQ_NONE;
-		else if (i == 0) continue;
+		if		(i == -1) { rtk->sol.stat = SOLQ_NONE; }
+		else if (i == 0)  { continue; }
 
 		if (mode == 0) {  /* forward/backward */
 			outResult(rtk, sopt, &navs);
@@ -848,12 +848,13 @@ static void procpos(rtk_t* rtk, const prcopt_t* popt, const solopt_t* sopt, int 
 				outsol(PPP_Glo.outFp[0], &rtk->sol, sopt, PPP_Glo.iEpoch);
 			else if (time.time == 0 || pri[rtk->sol.stat] <= pri[sol.stat]) {
 				sol = rtk->sol;
-				if (time.time == 0 || timediff(rtk->sol.time, time) < 0.0)
+				if (time.time == 0 || timediff(rtk->sol.time, time) < 0.0) {
 					time = rtk->sol.time;
+				}
 			}
 		}
 	}
-}
+};
 /* execute processing session ------------------------------------------------*/
 static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 {
@@ -880,7 +881,12 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 		PPP_Glo.revs = 0;
 		PPP_Glo.iObsu = 0;
 		PPP_Glo.iEpoch = 0;
+
+		rtk.fp_ppp = fopen("E:\\CppCode\\GNSS_QHY\\result\\sat_ppp_gamp.txt", "w");
+
 		procpos(&rtk, popt, sopt, 0);
+
+		fclose(rtk.fp_ppp);
 	}
 	else if (popt->soltype == 1) {		/* backward */
 		PPP_Glo.revs = 1;
@@ -950,8 +956,7 @@ static int execses(prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
 *
 *          ssr corrections are valid only for forward estimation.
 *-----------------------------------------------------------------------------*/
-extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt)
-{
+extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt, const solopt_t* sopt, filopt_t* fopt) {
 	/* 局部变量定义 ===================================================================== */
 	int i, j;									// 循环遍历变量
 	int stat = 0;								// 状态标识符
@@ -983,18 +988,12 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 	}
 
 	/* 5.read dcb parameters 读DCB文件 */
-	for (i = 0; i < MAXSAT; i++) for (j = 0; j < 3; j++) {
-		navs.cbias[i][j] = 0.0;
+	for (i = 0; i < MAXSAT; i++) {
+		for (j = 0; j < 3; j++) { navs.cbias[i][j] = 0.0; }
 	}
-	if (*fopt->p1p2dcbf) {
-		readdcb(fopt->p1p2dcbf, &navs);
-	}
-	if (*fopt->p1c1dcbf) {
-		readdcb(fopt->p1c1dcbf, &navs);
-	}
-	if (*fopt->p2c2dcbf) {
-		readdcb(fopt->p2c2dcbf, &navs);
-	}
+	if (*fopt->p1p2dcbf) { readdcb(fopt->p1p2dcbf, &navs); }
+	if (*fopt->p1c1dcbf) { readdcb(fopt->p1c1dcbf, &navs); }
+	if (*fopt->p2c2dcbf) { readdcb(fopt->p2c2dcbf, &navs); }
 	if (*fopt->mgexdcbf && (popt->navsys & SYS_CMP || popt->navsys & SYS_GAL)) {
 		readdcb_mgex(fopt->mgexdcbf, &navs, PPP_Glo.prcOpt_Ex.ts);
 	}
@@ -1038,6 +1037,7 @@ extern int gampPos(gtime_t ts, gtime_t te, double ti, double tu, prcopt_t* popt,
 
 	/* 10.read ocean tide loading parameters 读blq海洋潮文件 */
 	if (popt->mode > PMODE_SINGLE && fopt->blqf) {
+		setstr(&stas[0].name, "FDHD_QHY", 8);
 		readotl(popt, fopt->blqf, stas);
 	}
 

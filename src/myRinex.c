@@ -803,7 +803,7 @@ extern int findBlqFile(const gtime_t ts, const gtime_t te, char dir[], char file
 	char tmp[MAXSTRPATH];
 	char sep = (char)FILEPATHSEP;
 
-	sprintf(tmp, "%s%c%s", dir, sep, "ocnload.blq\0");
+	sprintf(tmp, "%s%c%s", dir, sep, "FD_Station.blq\0");
 	if (access(tmp, 0) != -1) {
 		strcpy(filepath, tmp);
 		return 1;
